@@ -1469,14 +1469,14 @@
             <div class="insight-icon"><i class="ti ti-calendar-x"></i></div>
             <div>
               <div style="font-size:13px;font-weight:700;color:var(--critical);">Attendance — Critical</div>
-              <div style="font-size:12px;color:#791F1F;margin-top:3px;line-height:1.5;">5 absences in the past 14 days. This exceeds the 3-absence threshold for a 2-week window. Parent has not responded to 2 contact attempts.</div>
+              <div style="font-size:12px;color:#791F1F;margin-top:3px;line-height:1.5;">Velocity Pattern: Absent 3 consecutive Mondays. Parent has not responded to 2 contact attempts.</div>
             </div>
           </div>
           <div class="insight-card flagged" style="margin-bottom:8px;">
             <div class="insight-icon"><i class="ti ti-trending-down"></i></div>
             <div>
               <div style="font-size:13px;font-weight:700;color:var(--flagged);">Academic decline — Flagged</div>
-              <div style="font-size:12px;color:#993C1D;margin-top:3px;line-height:1.5;">Scores dropped from 85 to 67 across the last 3 assessments — a 18-point decline. Grade trajectory is downward.</div>
+              <div style="font-size:12px;color:#993C1D;margin-top:3px;line-height:1.5;">Baseline Anomaly: Sudden standard deviation drop in Math from A-average to C-average.</div>
             </div>
           </div>
           <div class="insight-card monitoring">
@@ -1678,7 +1678,7 @@
               <div class="avatar-ring critical"><div class="avatar avatar-md">MS</div></div>
               <div class="student-info">
                 <div class="student-name">Maria Santos</div>
-                <div class="student-meta">5 absences · grades ↓18pts · homework 40%</div>
+                <div class="student-meta">Velocity pattern detected · std. dev drop · homework 40%</div>
                 <div style="margin-top:4px;"><span class="badge badge-critical" style="font-size:10px;">3 combined signals</span></div>
               </div>
               <i class="ti ti-chevron-right" style="color:var(--neutral-400);font-size:18px;"></i>
@@ -1746,6 +1746,29 @@
                 <div class="student-meta">Behavioral incident + 2 absences</div>
               </div>
               <span class="badge badge-flagged">Flagged</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">In Recovery (Shadow Monitoring) · 2</div>
+        <div style="padding:0 20px 0;">
+          <div class="card" style="margin-bottom:10px;">
+            <div class="student-row" onclick="navTo('screen-care')">
+              <div class="avatar-ring monitoring"><div class="avatar avatar-md">RL</div></div>
+              <div class="student-info">
+                <div class="student-name">Rosa Lopez</div>
+                <div class="student-meta">Baseline stabilized for 14 days. Ready for Success Handshake.</div>
+                <div style="margin-top:4px;"><span class="badge badge-monitoring" style="font-size:10px;">Positive Reinforcement</span></div>
+              </div>
+              <i class="ti ti-chevron-right" style="color:var(--neutral-400);font-size:18px;"></i>
+            </div>
+            <div class="student-row">
+              <div class="avatar-ring monitoring"><div class="avatar avatar-md">MV</div></div>
+              <div class="student-info">
+                <div class="student-name">Miguel Villanueva</div>
+                <div class="student-meta">Elevated sensitivity: 0 recent absences. 12 days remaining in shadow monitoring.</div>
+              </div>
+              <span class="badge badge-monitoring">Watching</span>
             </div>
           </div>
         </div>
@@ -1827,8 +1850,11 @@
             <div class="action-card selected" id="ac1" onclick="selectAction('ac1')">
               <div class="action-icon" style="background:rgba(212,130,10,0.15);color:var(--amber);"><i class="ti ti-message-circle"></i></div>
               <div style="flex:1;">
-                <div class="action-title">One-on-one check-in</div>
-                <div class="action-sub">Talk to Maria directly — ask about home situation and academic challenges</div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div class="action-title">One-on-one check-in</div>
+                  <span class="badge badge-monitoring" style="font-size:9px;padding:2px 6px;">✨ Recommended</span>
+                </div>
+                <div class="action-sub">Historically successful for this student. Generates context-aware script.</div>
               </div>
               <div style="width:18px;height:18px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;" id="ac1-check"><i class="ti ti-check" style="font-size:11px;color:white;"></i></div>
             </div>
@@ -1868,18 +1894,18 @@
           <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--deep-brown);margin-bottom:4px;">Check-in guide</div>
           <div style="font-size:13px;color:var(--mid-brown);margin-bottom:14px;">Suggested conversation prompts for your check-in with Maria. Use your judgment — these are guides, not scripts.</div>
 
-          <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Opening</div>
-          <div class="prompt-chip">"Maria, I noticed you've been away a few times lately. Is everything okay at home and in school?"</div>
+          <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Opening (Generative Context)</div>
+          <div class="prompt-chip">"Maria, I noticed you were out recently and your science teacher noted you looked a bit exhausted. Are you getting enough rest at home?"</div>
 
           <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:12px;">Academic</div>
-          <div class="prompt-chip">"Your scores have been lower lately. Is there anything in class that's been hard to follow? Are you able to study at home?"</div>
+          <div class="prompt-chip">"Your math scores dropped a bit sharply recently. Is there a specific topic that's been hard to follow? Are you able to study at home?"</div>
 
           <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:12px;">Home situation</div>
           <div class="prompt-chip">"It's okay if things are difficult right now. Is there anything I can do to help make school easier for you?"</div>
 
-          <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:12px;">What NOT to say</div>
+          <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:12px;">Student-Specific Anti-Pattern</div>
           <div style="background:var(--critical-bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--critical);line-height:1.6;margin-bottom:14px;">
-            Avoid: "Why haven't you been coming to school?" or "Your grades are really dropping." These can feel accusatory and may close the conversation.
+            Avoid suggesting immediate parent involvement. LIS data indicates high household stress, and this could cause Maria to shut down.
           </div>
 
           <button class="btn-primary" onclick="careStep(4)">Log outcome <i class="ti ti-arrow-right"></i></button>
