@@ -2124,7 +2124,7 @@ function navTo(id) {
   if(id === 'screen-attendance') renderAttList();
   if(id === 'screen-assessment') renderAssessList();
   
-  if (window.tutorials && tutorials[id] && !tutorialSeen[id]) {
+  if (typeof tutorials !== 'undefined' && tutorials[id] && !tutorialSeen[id]) {
     setTimeout(() => startTutorial(id), 300);
   }
 }
