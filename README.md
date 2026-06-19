@@ -81,6 +81,12 @@ The absence of a governing system is not just an inconvenience — it means the 
 
 **EduCare** is a teacher-facing mobile application that sits on top of data teachers already collect — attendance, grades, homework submission — and uses that data to automatically identify which students need individualized care, then guides teachers through a structured response workflow.
 
+### The Three Pillars of EduCare
+The platform is built upon three foundational pillars that manage the entire lifecycle of student intervention:
+1. **Pillar 1: Discovery** — The Early Warning System (EWS) lives here. The system analyzes routine data (attendance, grades, behavior) to automatically detect and learn which students need specialized care. For a deep dive into how we extract rich data with zero added teacher workload, see [discovery.md](file:///C:/Users/Raziel/OneDrive/Documents/06_Projects/Educare/discovery.md).
+2. **Pillar 2: Response** — Once a need is discovered, the system assists the teacher in executing specialized care through guided, low-friction workflows (e.g., check-in guides, escalation paths).
+3. **Pillar 3: Recovery** — The system monitors the ongoing status of students who have received a response, tracking subsequent data to determine if they are improving or if further intervention is required.
+
 ### The Core Design Principle
 Rather than asking teachers to identify who needs care (which requires judgment, time, and emotional bandwidth they may not have), the system identifies students for them. Teachers input routine quantitative data. The system concludes who needs attention and what kind. The teacher becomes the responder, not the detector.
 
