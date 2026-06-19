@@ -1062,6 +1062,41 @@
     margin: 0 20px;
   }
   .sync-text { font-size: 12px; color: var(--mid-brown); }
+
+  /* ── TUTORIAL OVERLAY ── */
+  .tutorial-overlay {
+    position: absolute; inset: 0;
+    background: rgba(26,18,8,0.7);
+    z-index: 300;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .tutorial-overlay.show { display: block; opacity: 1; }
+  .tutorial-tooltip {
+    position: absolute;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    width: 280px;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+    z-index: 301;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tutorial-tooltip.show { display: flex; }
+  .tutorial-title { font-size: 14px; font-weight: 700; color: var(--deep-brown); }
+  .tutorial-text { font-size: 13px; color: var(--mid-brown); line-height: 1.5; }
+  .tutorial-btn { padding: 8px 16px; background: var(--amber); color: white; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; align-self: flex-end; }
+  .tutorial-highlight {
+    position: relative;
+    z-index: 302 !important;
+    background: white !important;
+    border-radius: 12px;
+    pointer-events: none;
+    box-shadow: 0 0 0 4px rgba(255,255,255,1);
+  }
 </style>
 </head>
 <body>
@@ -1093,10 +1128,27 @@
       <div class="pin-avatar">MR</div>
       <div class="pin-name">Ms. Maria Reyes</div>
       <div class="pin-sub">Grade 5 — Section Sampaguita</div>
-      <div style="margin-top:32px;">
-        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="form-input" style="font-size:32px; text-align:center; letter-spacing: 12px; width: 160px; padding: 16px;" id="nativePin" oninput="nativePinInput(this)" placeholder="••••">
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div>
+        <div class="pin-dot" id="d3"></div>
+        <div class="pin-dot" id="d4"></div>
       </div>
-      <div style="font-size:14px;color:var(--mid-brown);margin-top:12px;">Enter your 4-digit PIN</div>
+      <div style="font-size:14px;color:var(--mid-brown);margin-top:8px;">Enter your PIN</div>
+      <div class="pin-keypad" id="pinKeypad">
+        <button class="pin-key" onclick="pinPress('1')">1</button>
+        <button class="pin-key" onclick="pinPress('2')">2</button>
+        <button class="pin-key" onclick="pinPress('3')">3</button>
+        <button class="pin-key" onclick="pinPress('4')">4</button>
+        <button class="pin-key" onclick="pinPress('5')">5</button>
+        <button class="pin-key" onclick="pinPress('6')">6</button>
+        <button class="pin-key" onclick="pinPress('7')">7</button>
+        <button class="pin-key" onclick="pinPress('8')">8</button>
+        <button class="pin-key" onclick="pinPress('9')">9</button>
+        <button class="pin-key empty"></button>
+        <button class="pin-key" onclick="pinPress('0')">0</button>
+        <button class="pin-key del" onclick="pinDel()"><i class="ti ti-backspace"></i></button>
+      </div>
       <div style="margin-top:20px;font-size:13px;color:var(--amber);cursor:pointer;">Use biometric instead</div>
     </div>
 
@@ -1115,7 +1167,7 @@
         </div>
 
         <!-- Alert Banner -->
-        <div class="alert-banner" onclick="navTo('screen-alerts')">
+        <div class="alert-banner" id="tut-alerts" onclick="navTo('screen-alerts')">
           <i class="ti ti-alert-triangle"></i>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:700;color:var(--critical);">3 students need your attention</div>
@@ -1174,7 +1226,7 @@
         </div>
 
         <!-- Quick actions -->
-        <div style="padding:16px 20px 0;">
+        <div style="padding:16px 20px 16px;" id="tut-quick">
           <div style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Quick actions</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div class="card-padded" style="cursor:pointer;display:flex;flex-direction:column;gap:8px;" onclick="navTo('screen-attendance')">
@@ -1211,7 +1263,7 @@
         </div>
       </div>
       <!-- Bottom Nav -->
-      <div class="bottom-nav">
+      <div class="bottom-nav" id="tut-nav">
         <div class="nav-item active" onclick="navTo('screen-dashboard')">
           <i class="ti ti-home"></i><span>Home</span>
         </div>
@@ -2021,6 +2073,14 @@
       <span id="toast-msg">Saved</span>
     </div>
 
+    <!-- TUTORIAL -->
+    <div class="tutorial-overlay" id="tutOverlay"></div>
+    <div class="tutorial-tooltip" id="tutTooltip">
+      <div class="tutorial-title" id="tutTitle"></div>
+      <div class="tutorial-text" id="tutText"></div>
+      <button class="tutorial-btn" id="tutBtn" onclick="nextTutStep()">Next</button>
+    </div>
+
   </div><!-- /phone -->
   <div class="phone-label" style="font-size:11px;opacity:0.6;">Tap any element to navigate · Full interactive prototype</div>
 </div>
@@ -2069,12 +2129,26 @@ function navTo(id) {
 setTimeout(() => { navTo('screen-pin'); }, 2000);
 
 // ── PIN ──
-function nativePinInput(el) {
-  if (el.value.length === 4) {
+function pinPress(d) {
+  if(pinVal.length >= 4) return;
+  pinVal += d;
+  updatePinDots();
+  if(pinVal.length === 4) {
     setTimeout(() => {
-      el.value = '';
+      pinVal = '';
+      updatePinDots();
       navTo('screen-dashboard');
+      setTimeout(startTutorial, 300);
     }, 400);
+  }
+}
+function pinDel() {
+  pinVal = pinVal.slice(0,-1);
+  updatePinDots();
+}
+function updatePinDots() {
+  for(let i=1;i<=4;i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i <= pinVal.length);
   }
 }
 
@@ -2235,6 +2309,62 @@ function showToast(msg) {
   document.getElementById('toast-msg').textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── TUTORIAL ──
+let tutStep = 0;
+const tutSteps = [
+  { target: null, title: 'Welcome to EduCare 👋', text: 'This is your daily dashboard. It gives you a quick overview of your class health and immediate action items.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
+  { target: 'tut-alerts', title: 'Smart Alerts', text: 'Critical alerts generated by the Early Warning System will appear right here at the top.', top: '190px', left: '50%', transform: 'translateX(-50%)' },
+  { target: 'tut-quick', title: 'Quick Actions', text: 'Use these shortcuts to quickly log daily attendance or assessment scores without digging through menus.', top: '480px', left: '50%', transform: 'translateX(-50%)' },
+  { target: 'tut-nav', title: 'Navigation', text: 'Access your full student roster, detailed logs, and reports down here. You are all set!', top: 'auto', bottom: '100px', left: '50%', transform: 'translateX(-50%)' }
+];
+
+function startTutorial() {
+  document.getElementById('tutOverlay').classList.add('show');
+  tutStep = 0;
+  showTutStep();
+}
+
+function showTutStep() {
+  document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+  
+  if(tutStep >= tutSteps.length) {
+    endTutorial();
+    return;
+  }
+  
+  const step = tutSteps[tutStep];
+  const tooltip = document.getElementById('tutTooltip');
+  
+  if(step.target) {
+    const el = document.getElementById(step.target);
+    if(el) {
+      el.classList.add('tutorial-highlight');
+      if (step.target === 'tut-nav') el.style.borderRadius = '0 0 44px 44px';
+    }
+  }
+  
+  document.getElementById('tutTitle').innerText = step.title;
+  document.getElementById('tutText').innerText = step.text;
+  document.getElementById('tutBtn').innerText = tutStep === tutSteps.length - 1 ? 'Get Started' : 'Next';
+  
+  tooltip.style.top = step.top || 'auto';
+  tooltip.style.bottom = step.bottom || 'auto';
+  tooltip.style.left = step.left || 'auto';
+  tooltip.style.transform = step.transform || 'none';
+  tooltip.classList.add('show');
+}
+
+function nextTutStep() {
+  tutStep++;
+  showTutStep();
+}
+
+function endTutorial() {
+  document.getElementById('tutOverlay').classList.remove('show');
+  document.getElementById('tutTooltip').classList.remove('show');
+  document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
 }
 
 // ── INIT ──
