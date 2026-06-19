@@ -1451,7 +1451,7 @@
         </div>
 
         <!-- EWS Insights -->
-        <div style="padding:12px 20px 0;">
+        <div style="padding:12px 20px 0;" id="prof-insights">
           <div class="insight-card critical" style="margin-bottom:8px;">
             <div class="insight-icon"><i class="ti ti-calendar-x"></i></div>
             <div>
@@ -1617,7 +1617,7 @@
         </div>
         <div style="width:36px;"></div>
       </div>
-      <div style="padding:0 20px 12px;flex-shrink:0;">
+      <div style="padding:0 20px 12px;flex-shrink:0;" id="assess-config">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label class="form-label">Assessment type</label>
@@ -2343,6 +2343,19 @@ const tutorials = {
   'screen-report': [
     { target: null, title: 'Class Reports', text: 'Analyze overall performance and attendance trends.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
     { target: 'rep-export', title: 'Export Buttons', text: 'Easily export full-quarter reports or handover summaries as PDFs for parents and admins.', top: 'auto', bottom: '150px', left: '50%', transform: 'translateX(-50%)' }
+  ],
+  'screen-profile': [
+    { target: null, title: 'Student Profile', text: "A 360° view of the student's performance, attendance, and well-being.", top: '35%', left: '50%', transform: 'translateX(-50%)' },
+    { target: 'prof-insights', title: 'AI Insights', text: 'The system automatically generates natural-language narratives explaining exactly why a student was flagged.', top: '420px', left: '50%', transform: 'translateX(-50%)' },
+    { target: 'profileTabs', title: 'Tabs', text: 'Use these tabs to dive deeper into Attendance patterns, Grades, or the student\'s past Care History.', top: '150px', left: '50%', transform: 'translateX(-50%)' }
+  ],
+  'screen-care': [
+    { target: null, title: 'Care Workflow', text: 'This wizard guides you through recording and tracking interventions.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
+    { target: 'care-step-1', title: 'Triage Summary', text: 'Before taking action, review the synthesized critical signals to understand the student\'s risk profile.', top: '120px', left: '50%', transform: 'translateX(-50%)' }
+  ],
+  'screen-assessment': [
+    { target: null, title: 'Log Assessment', text: 'Quickly input scores for the entire class.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
+    { target: 'assess-config', title: 'Configuration', text: 'Set the assessment type and maximum score here before inputting the grades below.', top: '220px', left: '50%', transform: 'translateX(-50%)' }
   ]
 };
 
