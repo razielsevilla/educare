@@ -1166,6 +1166,19 @@
           </div>
         </div>
 
+        <!-- Class Switcher -->
+        <div style="padding: 0 20px 16px;">
+          <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="openClassSelect()">
+            <div>
+              <div id="dash-class-type" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid-brown);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
+                <i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class
+              </div>
+              <div style="font-size:15px;font-weight:700;color:var(--deep-brown);" id="dash-class-name">Grade 5 — Sampaguita</div>
+            </div>
+            <i class="ti ti-selector" style="color:var(--neutral-400);font-size:20px;"></i>
+          </div>
+        </div>
+
         <!-- Alert Banner -->
         <div class="alert-banner" id="tut-alerts" onclick="navTo('screen-alerts')">
           <i class="ti ti-alert-triangle"></i>
@@ -1822,8 +1835,8 @@
             <div class="action-card" id="ac2" onclick="selectAction('ac2')">
               <div class="action-icon"><i class="ti ti-phone"></i></div>
               <div style="flex:1;">
-                <div class="action-title">Contact parent/guardian</div>
-                <div class="action-sub">Reach out to Maria's guardian — 2 prior attempts unanswered</div>
+                <div class="action-title" id="care-action-title">Contact parent/guardian</div>
+                <div class="action-sub" id="care-action-sub">Reach out to Maria's guardian — 2 prior attempts unanswered</div>
               </div>
               <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--border);" id="ac2-check"></div>
             </div>
@@ -2064,6 +2077,94 @@
         <div class="nav-item" onclick="navTo('screen-attendance')"><i class="ti ti-calendar"></i><span>Log</span></div>
         <div class="nav-item" onclick="navTo('screen-alerts')"><i class="ti ti-alert-triangle"></i><span>Alerts</span><div class="nav-badge">3</div></div>
         <div class="nav-item active" onclick="navTo('screen-report')"><i class="ti ti-chart-bar"></i><span>Report</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════ -->
+    <!-- SCREEN: INBOX -->
+    <!-- ══════════════════════════════ -->
+    <div class="screen" id="screen-inbox">
+      <div class="top-bar">
+        <div>
+          <div class="top-bar-title">Inbox</div>
+          <div class="top-bar-sub">Colleague network</div>
+        </div>
+        <div class="icon-btn"><i class="ti ti-edit"></i></div>
+      </div>
+      <div class="scroll-area">
+        <div style="padding:16px 20px;">
+          <!-- Mock messages -->
+          <div class="card" style="margin-bottom:10px;cursor:pointer;" onclick="showToast('Conversation with Mr. Cruz')">
+            <div style="display:flex;gap:12px;padding:12px;">
+              <div class="avatar avatar-md" style="background:#E3F2FD;color:#1565C0;">JC</div>
+              <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Mr. Juan Cruz</div>
+                  <div style="font-size:11px;color:var(--mid-brown);">10:42 AM</div>
+                </div>
+                <div style="font-size:12px;font-weight:700;color:var(--deep-brown);margin-top:2px;">Re: Maria Santos (G5-Sampaguita)</div>
+                <div style="font-size:12px;color:var(--mid-brown);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">Thanks for the heads up, I will check in with her today.</div>
+              </div>
+            </div>
+          </div>
+          <!-- another message -->
+          <div class="card">
+            <div style="display:flex;gap:12px;padding:12px;">
+              <div class="avatar avatar-md" style="background:#F3E5F5;color:#6A1B9A;">PL</div>
+              <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Ms. Patricia Lim</div>
+                  <div style="font-size:11px;color:var(--mid-brown);">Yesterday</div>
+                </div>
+                <div style="font-size:12px;font-weight:500;color:var(--deep-brown);margin-top:2px;">Grade 6 Science Grades</div>
+                <div style="font-size:12px;color:var(--mid-brown);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">Could you send me the final quarterly report?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="navTo('screen-dashboard')"><i class="ti ti-home"></i><span>Home</span></div>
+        <div class="nav-item" onclick="navTo('screen-students')"><i class="ti ti-users"></i><span>Students</span></div>
+        <div class="nav-item" onclick="navTo('screen-attendance')"><i class="ti ti-calendar"></i><span>Log</span></div>
+        <!-- Inbox inserted dynamically here -->
+        <div class="nav-item" onclick="navTo('screen-alerts')"><i class="ti ti-alert-triangle"></i><span>Alerts</span><div class="nav-badge">3</div></div>
+        <div class="nav-item" onclick="navTo('screen-report')"><i class="ti ti-chart-bar"></i><span>Report</span></div>
+      </div>
+    </div>
+
+    <!-- Class Select Modal -->
+    <div class="overlay" id="class-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:90;" onclick="closeClassSelect()"></div>
+    <div id="class-modal" style="display:none;position:absolute;bottom:0;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;z-index:100;box-shadow:0 -10px 40px rgba(0,0,0,0.1);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);">
+      <div style="width:40px;height:5px;background:var(--border-light);border-radius:3px;margin:0 auto 20px;"></div>
+      <div style="font-family:var(--serif);font-size:20px;font-weight:700;color:var(--deep-brown);margin-bottom:16px;">Select Class</div>
+      
+      <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Advisory</div>
+      <div class="card class-option" style="margin-bottom:16px;border:1.5px solid var(--amber);cursor:pointer;" onclick="selectClass('Grade 5 — Sampaguita', true, this)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+          <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Sampaguita</div>
+          <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;"></i>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Subject Classes</div>
+      <div class="card class-option" style="margin-bottom:8px;cursor:pointer;border:1.5px solid transparent;" onclick="selectClass('Grade 5 — Mabini', false, this)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Mabini</div>
+            <div style="font-size:12px;color:var(--mid-brown);">Science</div>
+          </div>
+          <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:none;"></i>
+        </div>
+      </div>
+      <div class="card class-option" style="cursor:pointer;border:1.5px solid transparent;" onclick="selectClass('Grade 6 — Rizal', false, this)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 6 — Rizal</div>
+            <div style="font-size:12px;color:var(--mid-brown);">Science</div>
+          </div>
+          <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:none;"></i>
+        </div>
       </div>
     </div>
 
@@ -2413,11 +2514,97 @@ function endTutorial() {
 // ── INIT ──
 renderAttList();
 renderAssessList();
+
+// Add Inbox to all bottom navs
+document.querySelectorAll('.bottom-nav').forEach(nav => {
+  const isInboxScreen = nav.parentElement.id === 'screen-inbox';
+  const inboxHtml = `<div class="nav-item ${isInboxScreen ? 'active' : ''}" onclick="navTo('screen-inbox')"><i class="ti ti-messages"></i><span>Inbox</span></div>`;
+  // Insert before the Alerts tab (which is the 4th item)
+  const alertsTab = nav.children[3];
+  if(alertsTab) {
+    alertsTab.insertAdjacentHTML('beforebegin', inboxHtml);
+  }
+});
+
 // Make all students in the roster clickable
 document.querySelectorAll('#screen-students .student-row').forEach(row => {
   row.style.cursor = 'pointer';
   row.onclick = () => navTo('screen-profile');
 });
+
+// ── CLASS SWITCHER LOGIC ──
+let currentClass = { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+
+function openClassSelect() {
+  const modal = document.getElementById('class-modal');
+  const overlay = document.getElementById('class-overlay');
+  overlay.style.display = 'block';
+  modal.style.display = 'block';
+  setTimeout(() => { modal.style.transform = 'translateY(0)'; }, 10);
+}
+
+function closeClassSelect() {
+  const modal = document.getElementById('class-modal');
+  const overlay = document.getElementById('class-overlay');
+  modal.style.transform = 'translateY(100%)';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    modal.style.display = 'none';
+  }, 300);
+}
+
+function selectClass(name, isAdvisory, element) {
+  currentClass = { name, isAdvisory };
+  
+  // Update UI checkmarks
+  document.querySelectorAll('.class-option').forEach(el => {
+    el.style.borderColor = 'transparent';
+    el.querySelector('.class-check').style.display = 'none';
+  });
+  element.style.borderColor = 'var(--amber)';
+  element.querySelector('.class-check').style.display = 'block';
+  
+  // Update dashboard display
+  document.getElementById('dash-class-name').textContent = name;
+  const typeEl = document.getElementById('dash-class-type');
+  if(isAdvisory) {
+    typeEl.innerHTML = '<i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class';
+  } else {
+    typeEl.innerHTML = '<i class="ti ti-book" style="color:var(--info);"></i> Subject Class';
+  }
+
+  // Update top bars across app
+  const topBarSubs = document.querySelectorAll('.top-bar-sub');
+  topBarSubs.forEach(el => {
+    if(el.textContent.includes('Section Sampaguita') || el.textContent.includes('Grade 5') || el.textContent.includes('Grade 6')) {
+      el.textContent = name;
+    }
+  });
+
+  // Update Care Workflow action card
+  const careActionTitle = document.getElementById('care-action-title');
+  const careActionSub = document.getElementById('care-action-sub');
+  if(careActionTitle && careActionSub) {
+    if(isAdvisory) {
+      careActionTitle.textContent = 'Contact parent/guardian';
+      careActionSub.textContent = 'Reach out to Maria\'s guardian — 2 prior attempts unanswered';
+      document.getElementById('ac2').onclick = () => selectAction('ac2');
+    } else {
+      careActionTitle.textContent = 'Message Class Adviser';
+      careActionSub.textContent = 'Send EWS summary to the adviser via Inbox';
+      document.getElementById('ac2').onclick = () => {
+        selectAction('ac2');
+        setTimeout(() => {
+          showToast('Drafting message to adviser...');
+          navTo('screen-inbox');
+        }, 500);
+      };
+    }
+  }
+
+  closeClassSelect();
+  showToast('Switched to ' + name);
+}
 
 </script>
 </body>
