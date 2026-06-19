@@ -19,12 +19,12 @@ app.get('/health', (req, res) => {
 
 // Zero-Knowledge Sync Endpoints (Receives & Sends Encrypted Blobs)
 app.post('/api/sync/push', (req, res) => {
-  const { schoolId, blobData } = req.body;
-  if (!schoolId || !blobData) {
-    return res.status(400).json({ error: 'schoolId and blobData are required' });
+  const { teacherId, blobData } = req.body;
+  if (!teacherId || !blobData) {
+    return res.status(400).json({ error: 'teacherId and blobData are required' });
   }
 
-  db.run(`INSERT INTO sync_blobs (schoolId, blobData) VALUES (?, ?)`, [schoolId, blobData], function(err) {
+  db.run(`INSERT INTO sync_blobs (teacherId, blobData) VALUES (?, ?)`, [teacherId, blobData], function(err) {
     if (err) {
       return res.status(500).json({ error: 'Failed to push sync blob' });
     }
@@ -33,14 +33,14 @@ app.post('/api/sync/push', (req, res) => {
 });
 
 app.get('/api/sync/pull', (req, res) => {
-  const schoolId = req.query.schoolId;
+  const teacherId = req.query.teacherId;
   const since = req.query.since || 0; // Fetch blobs after a certain ID
 
-  if (!schoolId) {
-    return res.status(400).json({ error: 'schoolId is required' });
+  if (!teacherId) {
+    return res.status(400).json({ error: 'teacherId is required' });
   }
 
-  db.all(`SELECT id, blobData, timestamp FROM sync_blobs WHERE schoolId = ? AND id > ? ORDER BY id ASC`, [schoolId, since], (err, rows) => {
+  db.all(`SELECT id, blobData, timestamp FROM sync_blobs WHERE teacherId = ? AND id > ? ORDER BY id ASC`, [teacherId, since], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to pull sync blobs' });
     }
@@ -48,34 +48,19 @@ app.get('/api/sync/pull', (req, res) => {
   });
 });
 
-// School Administration Endpoints
-app.post('/api/school/register', (req, res) => {
+// Teacher Administration Endpoints
+app.post('/api/teacher/register', (req, res) => {
   const { name } = req.body;
   if (!name) {
-    return res.status(400).json({ error: 'School name is required' });
+    return res.status(400).json({ error: 'Teacher name is required' });
   }
 
-  const schoolId = uuidv4();
-  db.run(`INSERT INTO schools (id, name) VALUES (?, ?)`, [schoolId, name], (err) => {
+  const teacherId = uuidv4();
+  db.run(`INSERT INTO teachers (id, name) VALUES (?, ?)`, [teacherId, name], (err) => {
     if (err) {
-      return res.status(500).json({ error: 'Failed to register school' });
+      return res.status(500).json({ error: 'Failed to register teacher' });
     }
-    res.json({ status: 'success', schoolId });
-  });
-});
-
-app.post('/api/school/invite-teacher', (req, res) => {
-  const { schoolId } = req.body;
-  if (!schoolId) {
-    return res.status(400).json({ error: 'schoolId is required' });
-  }
-
-  const inviteCode = uuidv4().substring(0, 8).toUpperCase();
-  db.run(`INSERT INTO invitations (code, schoolId, role) VALUES (?, ?, 'teacher')`, [inviteCode, schoolId], (err) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to generate invitation' });
-    }
-    res.json({ status: 'success', inviteCode });
+    res.json({ status: 'success', teacherId });
   });
 });
 

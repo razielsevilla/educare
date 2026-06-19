@@ -11,8 +11,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     
     // Create initial tables
     db.serialize(() => {
-      // Schools table
-      db.run(`CREATE TABLE IF NOT EXISTS schools (
+      // Teachers table
+      db.run(`CREATE TABLE IF NOT EXISTS teachers (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -20,22 +20,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
       // Encrypted Sync Blobs table
       // In a zero-knowledge architecture, the backend just stores encrypted blobs of data
-      // associated with a specific school and sync epoch.
+      // associated with a specific teacher and sync epoch.
       db.run(`CREATE TABLE IF NOT EXISTS sync_blobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        schoolId TEXT NOT NULL,
+        teacherId TEXT NOT NULL,
         blobData TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (schoolId) REFERENCES schools(id)
-      )`);
-
-      // Invitations table
-      db.run(`CREATE TABLE IF NOT EXISTS invitations (
-        code TEXT PRIMARY KEY,
-        schoolId TEXT NOT NULL,
-        role TEXT NOT NULL,
-        status TEXT DEFAULT 'pending',
-        FOREIGN KEY (schoolId) REFERENCES schools(id)
+        FOREIGN KEY (teacherId) REFERENCES teachers(id)
       )`);
     });
   }
