@@ -1122,129 +1122,6 @@
     </div>
 
     <!-- ══════════════════════════════ -->
-    <!-- SCREEN: ROLE SELECT -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-role-select" style="background:var(--warm-white);display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;">
-      <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--deep-brown);margin-bottom:12px;text-align:center;">Welcome to EduCare</div>
-      <div style="font-size:14px;color:var(--mid-brown);margin-bottom:32px;text-align:center;line-height:1.5;">Choose your role to continue setting up the offline-first environment.</div>
-      <button class="btn-primary" style="margin-bottom:12px;" onclick="navTo('screen-principal-setup')"><i class="ti ti-building-bank"></i> I am a Principal / Admin</button>
-      <button class="btn-secondary" onclick="navTo('screen-teacher-invite')"><i class="ti ti-chalkboard"></i> I am a Teacher</button>
-    </div>
-
-    <!-- ══════════════════════════════ -->
-    <!-- SCREEN: PRINCIPAL SETUP -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-principal-setup" style="background:var(--warm-white);display:none;">
-      <div class="top-bar">
-        <div class="back-btn" onclick="navTo('screen-role-select')"><i class="ti ti-chevron-left"></i></div>
-        <div style="text-align:center;flex:1;">
-          <div class="top-bar-title">School Setup</div>
-          <div class="top-bar-sub">Zero-Knowledge Architecture</div>
-        </div>
-        <div style="width:36px;"></div>
-      </div>
-      <div class="scroll-area" style="padding:20px;">
-        <label class="form-label">School Name</label>
-        <input class="form-input" value="San Juan Elementary School" style="margin-bottom:20px;">
-        
-        <div style="background:var(--critical-bg);border:1px solid #F7C1C1;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:700;color:var(--critical);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;"><i class="ti ti-shield-lock"></i> Master Recovery Key</div>
-          <div style="font-size:13px;color:#791F1F;line-height:1.5;margin-bottom:12px;">This key encrypts your school's data. If you lose this key, your data cannot be recovered. EduCare admins cannot reset it.</div>
-          <div style="background:white;border:1px dashed var(--critical);padding:10px;border-radius:8px;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--deep-brown);text-align:center;letter-spacing:0.1em;user-select:all;">
-            XR9A-4B2C-9MQP-7LKJ
-          </div>
-        </div>
-
-        <div class="check-item px" style="padding-left:0;padding-right:0;" onclick="toggleCheck(this)">
-          <div class="check-box checked"><i class="ti ti-check" style="font-size:12px;"></i></div>
-          <div class="check-text" style="font-size:13px;">I have saved this Master Key securely.</div>
-        </div>
-        
-        <div style="margin-top:32px;">
-          <button class="btn-primary" onclick="showToast('School Initialized'); setTimeout(() => navTo('screen-principal-dash'), 1000);"><i class="ti ti-check"></i> Initialize School</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════ -->
-    <!-- SCREEN: PRINCIPAL DASHBOARD -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-principal-dash" style="background:var(--warm-white);display:none;">
-      <div class="top-bar">
-        <div>
-          <div class="top-bar-title">Principal Dashboard</div>
-          <div class="top-bar-sub">San Juan Elementary School</div>
-        </div>
-        <div class="icon-btn" onclick="navTo('screen-role-select')"><i class="ti ti-logout"></i></div>
-      </div>
-      <div class="scroll-area" style="padding:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Teachers & Classes</div>
-          <button class="btn-sm" onclick="document.getElementById('invite-modal').style.display='flex'"><i class="ti ti-plus"></i> Invite</button>
-        </div>
-        <div class="card" style="margin-bottom:20px;">
-          <div class="student-row">
-            <div class="avatar avatar-md" style="background:var(--neutral-100);color:var(--neutral-600);">...</div>
-            <div class="student-info">
-              <div class="student-name" style="color:var(--mid-brown);">Pending Invite</div>
-              <div class="student-meta">Grade 5 — Sampaguita</div>
-            </div>
-            <span class="badge" style="background:var(--neutral-100);color:var(--neutral-600);">Invited</span>
-          </div>
-        </div>
-
-        <div style="font-size:14px;font-weight:700;color:var(--deep-brown);margin-bottom:12px;">School Health Overview</div>
-        <div class="card-padded">
-          <div style="display:flex;align-items:center;justify-content:center;height:100px;color:var(--mid-brown);font-size:13px;text-align:center;">
-            Data will populate once teachers begin syncing encrypted logs.
-          </div>
-        </div>
-      </div>
-
-      <!-- Invite Modal inline for prototype -->
-      <div id="invite-modal" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px;">
-        <div class="card-padded" style="width:100%;max-width:340px;margin:auto;">
-          <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--deep-brown);margin-bottom:12px;">Invite Teacher</div>
-          <label class="form-label">Assign to Class</label>
-          <select class="form-select" style="margin-bottom:16px;">
-            <option>Grade 5 — Sampaguita</option>
-            <option>Grade 6 — Rizal</option>
-          </select>
-          <div style="font-size:12px;color:var(--mid-brown);margin-bottom:8px;">Generated Invite Code:</div>
-          <div style="background:var(--amber-tint);border:1px dashed var(--amber);padding:12px;border-radius:8px;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--amber-deep);text-align:center;letter-spacing:0.1em;margin-bottom:20px;">
-            A8B29C
-          </div>
-          <div style="display:flex;gap:10px;">
-            <button class="btn-ghost" style="flex:1;" onclick="document.getElementById('invite-modal').style.display='none'">Close</button>
-            <button class="btn-primary" style="flex:1;" onclick="showToast('Code copied'); document.getElementById('invite-modal').style.display='none'">Copy Code</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════ -->
-    <!-- SCREEN: TEACHER INVITE -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-teacher-invite" style="background:var(--warm-white);display:none;">
-      <div class="top-bar">
-        <div class="back-btn" onclick="navTo('screen-role-select')"><i class="ti ti-chevron-left"></i></div>
-        <div style="text-align:center;flex:1;">
-          <div class="top-bar-title">Join School</div>
-        </div>
-        <div style="width:36px;"></div>
-      </div>
-      <div class="scroll-area" style="padding:20px;display:flex;flex-direction:column;justify-content:center;">
-        <div style="text-align:center;margin-bottom:32px;">
-          <i class="ti ti-lock" style="font-size:48px;color:var(--amber);margin-bottom:16px;"></i>
-          <div style="font-family:var(--serif);font-size:22px;font-weight:700;color:var(--deep-brown);margin-bottom:8px;">Enter Invite Code</div>
-          <div style="font-size:13px;color:var(--mid-brown);line-height:1.5;">Get this code from your Principal to securely sync your class data.</div>
-        </div>
-        <input class="form-input" placeholder="e.g. A8B29C" style="text-align:center;font-size:18px;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:24px;" value="A8B29C">
-        <button class="btn-primary" onclick="showToast('Verifying key...'); setTimeout(() => navTo('screen-pin'), 1500);"><i class="ti ti-arrow-right"></i> Continue to Setup</button>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════ -->
     <!-- SCREEN: PIN -->
     <!-- ══════════════════════════════ -->
     <div class="screen" id="screen-pin" style="background:var(--warm-white);display:none;flex-direction:column;align-items:center;padding-top:80px;">
@@ -2353,8 +2230,8 @@ function navTo(id) {
   }
 }
 
-// ── SPLASH → ROLE SELECT ──
-setTimeout(() => { navTo('screen-role-select'); }, 2000);
+// ── SPLASH → PIN ──
+setTimeout(() => { navTo('screen-pin'); }, 2000);
 
 // ── PIN ──
 function pinPress(d) {
