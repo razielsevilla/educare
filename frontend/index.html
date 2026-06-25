@@ -85,6 +85,7 @@
 
     .screen.active {
       display: flex;
+      z-index: 1;
     }
 
     /* ── SCROLL AREA ── */
@@ -131,6 +132,37 @@
       margin-top: 2px;
     }
 
+    /* ── SCREEN HEADER (matches Home greeting style) ── */
+    .screen-header {
+      padding: calc(env(safe-area-inset-top, 44px) + 16px) 20px 16px;
+      background: var(--warm-white);
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .screen-header-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    .screen-header-title {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--deep-brown);
+      line-height: 1.1;
+    }
+
+    .screen-header-sub {
+      font-size: 12px;
+      color: var(--mid-brown);
+      margin-top: 6px;
+    }
+
     .back-btn {
       width: 36px;
       height: 36px;
@@ -167,6 +199,11 @@
       border-top: 1px solid var(--border);
       padding: 8px 0 calc(env(safe-area-inset-bottom, 16px) + 8px);
       flex-shrink: 0;
+    }
+
+    /* Hide desktop prototype label on mobile */
+    .phone-label {
+      display: none;
     }
 
     .nav-item {
@@ -1633,32 +1670,38 @@
 
     /* ── TUTORIAL OVERLAY ── */
     .tutorial-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: rgba(26, 18, 8, 0.7);
       z-index: 300;
       display: none;
       opacity: 0;
       transition: opacity 0.3s;
+      pointer-events: none;
     }
 
     .tutorial-overlay.show {
       display: block;
       opacity: 1;
+      pointer-events: auto;
     }
 
     .tutorial-tooltip {
-      position: absolute;
+      position: fixed;
       background: white;
-      border-radius: 12px;
-      padding: 16px;
-      width: 280px;
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      width: min(300px, calc(100vw - 48px));
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
       z-index: 305;
-      /* MUST be higher than highlight (302) */
       display: none;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
+      pointer-events: auto;
+      /* Always centered */
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
 
     .tutorial-tooltip.show {
@@ -1724,8 +1767,8 @@
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-pin"
         style="background:var(--warm-white);display:none;flex-direction:column;align-items:center;padding-top:80px;">
-        <div class="pin-avatar">MR</div>
-        <div class="pin-name">Ms. Maria Reyes</div>
+        <div class="pin-avatar">MF</div>
+        <div class="pin-name">Ms. Maria Faraon</div>
         <div class="pin-sub">Grade 5 — Section Sampaguita</div>
         <div class="pin-dots" id="pinDots">
           <div class="pin-dot" id="d1"></div>
@@ -1756,14 +1799,24 @@
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-dashboard">
         <div class="scroll-area">
-          <div class="greeting">
-            <div class="greeting-sub">Good morning 🌤</div>
-            <div class="greeting-name">Ms. Reyes</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-              <div class="offline-pill">
-                <div class="offline-dot"></div>Offline · Synced 7:02 AM
+          <div class="greeting" style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div class="greeting-sub">Good morning 🌤</div>
+              <div class="greeting-name">Ms. Faraon</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                <div class="offline-pill">
+                  <div class="offline-dot"></div>Offline · Synced 7:02 AM
+                </div>
+                <div style="font-size:12px;color:var(--mid-brown);">Monday, June 16</div>
               </div>
-              <div style="font-size:12px;color:var(--mid-brown);">Monday, June 16</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-primary" style="font-size:11px; padding:6px 10px; border-radius:6px; background:var(--info); border:none; color:white; cursor:pointer; height:auto; width:auto; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.fillMockData()">
+                <i class="ti ti-database-import" style="font-size:13px;"></i> Populate
+              </button>
+              <button class="btn-ghost" style="font-size:11px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:white; color:var(--critical); cursor:pointer; height:auto; width:auto; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.clearLocalState()">
+                <i class="ti ti-trash" style="font-size:13px;"></i> Reset
+              </button>
             </div>
           </div>
 
@@ -1775,16 +1828,13 @@
               <div>
                 <div id="dash-class-type"
                   style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid-brown);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
-                  <i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class
+                  <i class="ti ti-alert-circle" style="color:var(--neutral-400);"></i> Tap to Populate
                 </div>
-                <div style="font-size:15px;font-weight:700;color:var(--deep-brown);" id="dash-class-name">Grade 5 —
-                  Sampaguita</div>
+                <div style="font-size:15px;font-weight:700;color:var(--deep-brown);" id="dash-class-name">No Class Selected</div>
               </div>
               <i class="ti ti-selector" style="color:var(--neutral-400);font-size:20px;"></i>
             </div>
           </div>
-
-
 
           <!-- Class Health (Three Pillars) -->
           <div style="padding:16px 20px 0;">
@@ -1795,15 +1845,15 @@
             </div>
             <div class="health-grid" style="grid-template-columns: repeat(3, 1fr);">
               <div class="health-cell crit" style="cursor: default;">
-                <div class="num">8</div>
+                <div class="num" id="dash-health-discovered">0</div>
                 <div class="lbl">Discovered</div>
               </div>
               <div class="health-cell flag" style="cursor: default;">
-                <div class="num">2</div>
+                <div class="num" id="dash-health-responses">0</div>
                 <div class="lbl">Responses Due</div>
               </div>
               <div class="health-cell mon" style="cursor: default;">
-                <div class="num">2</div>
+                <div class="num" id="dash-health-recovery">0</div>
                 <div class="lbl">In Recovery</div>
               </div>
             </div>
@@ -1854,18 +1904,17 @@
 
         </div>
         <!-- Bottom Nav -->
-
-        <div class="bottom-nav">
-          <div class="nav-item" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
+        <div class="bottom-nav" id="tut-nav">
+          <div class="nav-item active" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
             <i class="ti ti-home"></i><span>Home</span>
           </div>
           <div class="nav-item" data-target="screen-discovery" onclick="navTo('screen-discovery')">
             <i class="ti ti-radar"></i><span>Discovery</span>
-            <div class="nav-badge">3</div>
+            <div class="nav-badge" id="badge-discovery">3</div>
           </div>
           <div class="nav-item" data-target="screen-response" onclick="navTo('screen-response')">
             <i class="ti ti-heart-handshake"></i><span>Response</span>
-            <div class="nav-badge" style="background:var(--amber);right:45%;">2</div>
+            <div class="nav-badge" id="badge-response" style="background:var(--amber);right:45%;">2</div>
           </div>
           <div class="nav-item" data-target="screen-recovery" onclick="navTo('screen-recovery')">
             <i class="ti ti-activity"></i><span>Recovery</span>
@@ -1880,12 +1929,10 @@
       <!-- SCREEN: STUDENTS LIST -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-students">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Students</div>
-            <div class="top-bar-sub">Grade 5 — Section Sampaguita · 43 students</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
+        <div class="screen-header">
+          <div class="screen-header-eyebrow">Class Roster</div>
+          <div class="screen-header-title">Students</div>
+          <div class="screen-header-sub">Grade 5 — Section Sampaguita · 43 students</div>
         </div>
         <div style="padding:0 20px 10px;flex-shrink:0;">
           <div style="position:relative;" id="stu-search">
@@ -1902,12 +1949,10 @@
             <button class="btn-sm-ghost" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Clear</button>
           </div>
         </div>
-        <div style="padding:0 20px 10px; text-align:right;">
-          <button class="btn-sm" style="background:var(--info); color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.fillMockData()">Fill Mock Data</button>
-        </div>
         <div class="scroll-area" id="rosterContainer" style="padding-bottom:100px;">
           <!-- Rendered dynamically by JS -->
         </div>
+        <!-- Bottom Nav -->
         <div class="bottom-nav">
           <div class="nav-item" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
             <i class="ti ti-home"></i><span>Home</span>
@@ -2171,25 +2216,6 @@
           <!-- Rendered by JS -->
         </div>
 
-        <div class="bottom-nav">
-          <div class="nav-item" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
-            <i class="ti ti-home"></i><span>Home</span>
-          </div>
-          <div class="nav-item" data-target="screen-discovery" onclick="navTo('screen-discovery')">
-            <i class="ti ti-radar"></i><span>Discovery</span>
-            <div class="nav-badge">3</div>
-          </div>
-          <div class="nav-item" data-target="screen-response" onclick="navTo('screen-response')">
-            <i class="ti ti-heart-handshake"></i><span>Response</span>
-            <div class="nav-badge" style="background:var(--amber);right:45%;">2</div>
-          </div>
-          <div class="nav-item" data-target="screen-recovery" onclick="navTo('screen-recovery')">
-            <i class="ti ti-activity"></i><span>Recovery</span>
-          </div>
-          <div class="nav-item" data-target="screen-students" onclick="navTo('screen-students')">
-            <i class="ti ti-users"></i><span>Roster</span>
-          </div>
-        </div>
       </div>
 
       <!-- ══════════════════════════════ -->
@@ -2283,7 +2309,7 @@
       <div class="screen" id="screen-behavior">
         <div class="top-bar">
           <div>
-            <div class="top-bar-title">1-Tap Behavior</div>
+            <div class="top-bar-title">Log Behavior</div>
             <div class="top-bar-sub">Grade 5 — Sampaguita</div>
           </div>
           <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
@@ -2339,17 +2365,13 @@
       <!-- SCREEN: ALERTS / EWS -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-discovery">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Discovery</div>
-            <div class="top-bar-sub">8 students need attention</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
+        <div class="screen-header">
+          <div class="screen-header-eyebrow">Early Warning System</div>
+          <div class="screen-header-title">Discovery</div>
+          <div class="screen-header-sub" id="discovery-header-sub">0 students flagged · Grade 5 — Sampaguita</div>
         </div>
-        <div class="scroll-area" id="discoveryContainer" style="padding-bottom:100px;">
+        <div class="scroll-area" id="discoveryContainer" style="padding-bottom:16px;">
           <!-- Rendered dynamically by JS -->
-        </div>
-
           <div style="padding:0 20px 24px;">
             <div class="sync-row">
               <div style="display:flex;align-items:center;gap:8px;">
@@ -2822,17 +2844,13 @@
       <!-- SCREEN: RESPONSE -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-response">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Response</div>
-            <div class="top-bar-sub">Active care workflows</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
+        <div class="screen-header">
+          <div class="screen-header-eyebrow">Care Workflows</div>
+          <div class="screen-header-title">Response</div>
+          <div class="screen-header-sub">Active interventions · Grade 5 — Sampaguita</div>
         </div>
-        <div class="scroll-area">
         <div class="scroll-area" id="responseContainer" style="padding-bottom:100px;">
           <!-- Rendered dynamically by JS -->
-        </div>
         </div>
 
         <div class="bottom-nav">
@@ -2861,87 +2879,13 @@
       <!-- SCREEN: RECOVERY -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-recovery">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Recovery</div>
-            <div class="top-bar-sub">Tracking outcomes & handshakes</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
+        <div class="screen-header">
+          <div class="screen-header-eyebrow">Shadow Monitoring</div>
+          <div class="screen-header-title">Recovery</div>
+          <div class="screen-header-sub">Tracking outcomes & handshakes</div>
         </div>
         <div class="scroll-area" id="recoveryContainer" style="padding-bottom:100px;">
           <!-- Rendered dynamically by JS -->
-        </div>
-
-        <div class="bottom-nav">
-          <div class="nav-item" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
-            <i class="ti ti-home"></i><span>Home</span>
-          </div>
-          <div class="nav-item" data-target="screen-discovery" onclick="navTo('screen-discovery')">
-            <i class="ti ti-radar"></i><span>Discovery</span>
-            <div class="nav-badge">3</div>
-          </div>
-          <div class="nav-item" data-target="screen-response" onclick="navTo('screen-response')">
-            <i class="ti ti-heart-handshake"></i><span>Response</span>
-            <div class="nav-badge" style="background:var(--amber);right:45%;">2</div>
-          </div>
-          <div class="nav-item" data-target="screen-recovery" onclick="navTo('screen-recovery')">
-            <i class="ti ti-activity"></i><span>Recovery</span>
-          </div>
-          <div class="nav-item" data-target="screen-students" onclick="navTo('screen-students')">
-            <i class="ti ti-users"></i><span>Roster</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════ -->
-      <!-- SCREEN: INBOX -->
-      <!-- ══════════════════════════════ -->
-      <div class="screen" id="screen-inbox">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Inbox</div>
-            <div class="top-bar-sub">Colleague network</div>
-          </div>
-          <div class="icon-btn"><i class="ti ti-edit"></i></div>
-        </div>
-        <div class="scroll-area">
-          <div style="padding:16px 20px;">
-            <!-- Mock messages -->
-            <div class="card" style="margin-bottom:10px;cursor:pointer;"
-              onclick="showToast('Conversation with Mr. Cruz')">
-              <div style="display:flex;gap:12px;padding:12px;">
-                <div class="avatar avatar-md" style="background:#E3F2FD;color:#1565C0;">JC</div>
-                <div style="flex:1;">
-                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
-                    <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Mr. Juan Cruz</div>
-                    <div style="font-size:11px;color:var(--mid-brown);">10:42 AM</div>
-                  </div>
-                  <div style="font-size:12px;font-weight:700;color:var(--deep-brown);margin-top:2px;">Re: Maria Santos
-                    (G5-Sampaguita)</div>
-                  <div
-                    style="font-size:12px;color:var(--mid-brown);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">
-                    Thanks for the heads up, I will check in with her today.</div>
-                </div>
-              </div>
-            </div>
-            <!-- another message -->
-            <div class="card">
-              <div style="display:flex;gap:12px;padding:12px;">
-                <div class="avatar avatar-md" style="background:#F3E5F5;color:#6A1B9A;">PL</div>
-                <div style="flex:1;">
-                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
-                    <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Ms. Patricia Lim</div>
-                    <div style="font-size:11px;color:var(--mid-brown);">Yesterday</div>
-                  </div>
-                  <div style="font-size:12px;font-weight:500;color:var(--deep-brown);margin-top:2px;">Grade 6 Science
-                    Grades</div>
-                  <div
-                    style="font-size:12px;color:var(--mid-brown);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">
-                    Could you send me the final quarterly report?</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="bottom-nav">
@@ -2976,40 +2920,7 @@
           style="font-family:var(--serif);font-size:20px;font-weight:700;color:var(--deep-brown);margin-bottom:16px;">
           Select Class</div>
 
-        <div
-          style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-          Advisory</div>
-        <div class="card class-option" style="margin-bottom:16px;border:1.5px solid var(--amber);cursor:pointer;"
-          onclick="selectClass('Grade 5 — Sampaguita', true, this)">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-            <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Sampaguita</div>
-            <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;"></i>
-          </div>
-        </div>
-
-        <div
-          style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-          Subject Classes</div>
-        <div class="card class-option" style="margin-bottom:8px;cursor:pointer;border:1.5px solid transparent;"
-          onclick="selectClass('Grade 5 — Mabini', false, this)">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Mabini</div>
-              <div style="font-size:12px;color:var(--mid-brown);">Science</div>
-            </div>
-            <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:none;"></i>
-          </div>
-        </div>
-        <div class="card class-option" style="cursor:pointer;border:1.5px solid transparent;"
-          onclick="selectClass('Grade 6 — Rizal', false, this)">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 6 — Rizal</div>
-              <div style="font-size:12px;color:var(--mid-brown);">Science</div>
-            </div>
-            <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:none;"></i>
-          </div>
-        </div>
+        <div id="class-options-container"></div>
       </div>
 
       <!-- TOAST -->
@@ -3249,6 +3160,11 @@
         target.querySelector('.scroll-area') && (target.querySelector('.scroll-area').scrollTop = 0);
       }
       if (id === 'screen-attendance') { attRollCallIndex = -1; renderAttWorkspace(); }
+
+      // Update active tab highlight across all bottom navs
+      document.querySelectorAll('.nav-item[data-target]').forEach(item => {
+        item.classList.toggle('active', item.dataset.target === id);
+      });
 
       if (typeof tutorials !== 'undefined' && tutorials[id] && !tutorialSeen[id]) {
         setTimeout(() => startTutorial(id), 300);
@@ -3719,6 +3635,10 @@
     }
 
     function completeCarework() {
+      const studentName = document.querySelector('#screen-care .top-bar-sub').textContent;
+      if (window.moveToRecovery) {
+        window.moveToRecovery(studentName);
+      }
       showToast('Care workflow saved · Follow-up set for Jun 23');
       setTimeout(() => {
         careStep(1);
@@ -3821,8 +3741,15 @@
         { target: 'care-step-1', title: 'Triage Summary', text: 'Before taking action, review the synthesized critical signals to understand the student\'s risk profile.', top: '120px', left: '50%', transform: 'translateX(-50%)' }
       ],
       'screen-assessment': [
-        { target: null, title: 'Log Assessment', text: 'Quickly input scores for the entire class.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
         { target: 'assess-config', title: 'Configuration', text: 'Set the assessment type and maximum score here before inputting the grades below.', top: '220px', left: '50%', transform: 'translateX(-50%)' }
+      ],
+      'screen-response': [
+        { target: null, title: 'Active Interventions', text: 'This screen displays students currently in active care workflows.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
+        { target: 'responseContainer', title: 'Pending Check-ins', text: 'Tap on a student to resume their care workflow, access check-in guides, or log intervention outcomes.', top: '280px', left: '50%', transform: 'translateX(-50%)' }
+      ],
+      'screen-recovery': [
+        { target: null, title: 'Shadow Monitoring', text: 'This screen lists students who are currently in the recovery phase.', top: '35%', left: '50%', transform: 'translateX(-50%)' },
+        { target: 'recoveryContainer', title: 'Recovery Watchlist', text: 'The system watches these students closely. Once their data stabilizes, the care loop is successfully closed.', top: '280px', left: '50%', transform: 'translateX(-50%)' }
       ]
     };
 
@@ -3859,10 +3786,7 @@
       document.getElementById('tutText').innerText = step.text;
       document.getElementById('tutBtn').innerText = tutStep === steps.length - 1 ? 'Get Started' : 'Next';
 
-      tooltip.style.top = step.top || 'auto';
-      tooltip.style.bottom = step.bottom || 'auto';
-      tooltip.style.left = step.left || 'auto';
-      tooltip.style.transform = step.transform || 'none';
+      // Always center — positions are set via CSS
       tooltip.classList.add('show');
     }
 
@@ -3882,16 +3806,7 @@
     showAssessList();
     renderBehaviorGrid();
 
-    // Add Inbox to all bottom navs
-    document.querySelectorAll('.bottom-nav').forEach(nav => {
-      const isInboxScreen = nav.parentElement.id === 'screen-inbox';
-      const inboxHtml = `<div class="nav-item ${isInboxScreen ? 'active' : ''}" onclick="navTo('screen-inbox')"><i class="ti ti-messages"></i><span>Inbox</span></div>`;
-      // Insert before the Roster tab (which is the 4th item, index 4)
-      const rosterTab = nav.children[4];
-      if (rosterTab) {
-        rosterTab.insertAdjacentHTML('beforebegin', inboxHtml);
-      }
-    });
+    // (Inbox removed for V1 — focusing on Discovery, Response, Recovery)
 
     // Make all students in the roster clickable
     document.querySelectorAll('#screen-students .student-row').forEach(row => {
@@ -3901,8 +3816,56 @@
 
     // ── CLASS SWITCHER LOGIC ──
     let currentClass = { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+    window.currentClass = currentClass;
 
     function openClassSelect() {
+      const students = getStoreStudents();
+      const container = document.getElementById('class-options-container');
+      if (container) {
+        if (students.length === 0) {
+          container.innerHTML = `
+            <div style="text-align:center; padding: 20px 0; color: var(--mid-brown); font-size:14px; line-height:1.5;">
+              No classes available.<br>Please populate data first.
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+              Advisory</div>
+            <div class="card class-option" style="margin-bottom:16px;border:1.5px solid ${currentClass.name === 'Grade 5 — Sampaguita' ? 'var(--amber)' : 'transparent'};cursor:pointer;"
+              onclick="selectClass('Grade 5 — Sampaguita', true, this)">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+                <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Sampaguita</div>
+                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 5 — Sampaguita' ? 'block' : 'none'};"></i>
+              </div>
+            </div>
+
+            <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+              Subject Classes</div>
+            <div class="card class-option" style="margin-bottom:8px;cursor:pointer;border:1.5px solid ${currentClass.name === 'Grade 5 — Mabini' ? 'var(--amber)' : 'transparent'};"
+              onclick="selectClass('Grade 5 — Mabini', false, this)">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Mabini</div>
+                  <div style="font-size:12px;color:var(--mid-brown);">Science</div>
+                </div>
+                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 5 — Mabini' ? 'block' : 'none'};"></i>
+              </div>
+            </div>
+            <div class="card class-option" style="cursor:pointer;border:1.5px solid ${currentClass.name === 'Grade 6 — Rizal' ? 'var(--amber)' : 'transparent'};"
+              onclick="selectClass('Grade 6 — Rizal', false, this)">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 6 — Rizal</div>
+                  <div style="font-size:12px;color:var(--mid-brown);">Science</div>
+                </div>
+                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 6 — Rizal' ? 'block' : 'none'};"></i>
+              </div>
+            </div>
+          `;
+        }
+      }
+
       const modal = document.getElementById('class-modal');
       const overlay = document.getElementById('class-overlay');
       overlay.style.display = 'block';
@@ -3922,6 +3885,7 @@
 
     function selectClass(name, isAdvisory, element) {
       currentClass = { name, isAdvisory };
+      window.currentClass = currentClass;
 
       // Update UI checkmarks
       document.querySelectorAll('.class-option').forEach(el => {
@@ -3958,19 +3922,19 @@
           document.getElementById('ac2').onclick = () => selectAction('ac2');
         } else {
           careActionTitle.textContent = 'Message Class Adviser';
-          careActionSub.textContent = 'Send EWS summary to the adviser via Inbox';
+          careActionSub.textContent = 'Send EWS summary to the class adviser';
           document.getElementById('ac2').onclick = () => {
             selectAction('ac2');
-            setTimeout(() => {
-              showToast('Drafting message to adviser...');
-              navTo('screen-inbox');
-            }, 500);
+            setTimeout(() => { showToast('Messaging coming in a future version'); }, 500);
           };
         }
       }
 
       closeClassSelect();
       showToast('Switched to ' + name);
+      if (window.renderDynamicScreens) {
+        window.renderDynamicScreens();
+      }
     }
 
   </script>
