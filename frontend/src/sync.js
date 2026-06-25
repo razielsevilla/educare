@@ -1,7 +1,11 @@
 // src/sync.js
 import { getStore, saveStore, getSyncBlob, applySyncBlob } from './store.js';
 
-const API_BASE = 'http://localhost:3000/api';
+const PC_IP = '172.16.44.165';
+const hostname = window.location.hostname;
+const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1') 
+  ? `http://${PC_IP}:3000/api` 
+  : `http://${hostname}:3000/api`;
 
 export const registerTeacher = async (name) => {
   try {
