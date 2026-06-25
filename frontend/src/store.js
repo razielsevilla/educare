@@ -71,6 +71,15 @@ export const addStudent = (name) => {
 
 export const fillMockData = () => {
   const state = getStore();
+  
+  // Reset all existing records to empty state
+  state.students = [];
+  state.attState = {};
+  state.assessments = [];
+  state.submissions = {};
+  state.assessScores = {};
+  state.workflows = [];
+
   const mockStudents = [
     'Maria Santos', 'Jose Reyes', 'Carla Garcia', 'Ana Lim', 'Juan Pablo Cruz',
     'Ben Torres', 'Rosa Lopez', 'Miguel Villanueva', 'Karla Dela Cruz', 'Paolo Bautista',
@@ -79,12 +88,8 @@ export const fillMockData = () => {
   ];
   
   mockStudents.forEach(s => {
-    if (!state.students.includes(s)) {
-      state.students.push(s);
-    }
-    if (!state.attState[s]) {
-      state.attState[s] = 'P';
-    }
+    state.students.push(s);
+    state.attState[s] = 'P'; // Default attendance
   });
   
   saveStore(state);
@@ -114,4 +119,21 @@ export const applySyncBlob = (blobStr, newSyncId) => {
   } catch (e) {
     console.error('Failed to apply sync blob', e);
   }
+};
+
+export const moveToRecovery = (student) => {
+  const state = getStore();
+  if (!state.workflows) state.workflows = [];
+  const idx = state.workflows.findIndex(w => w.student === student);
+  if (idx !== -1) {
+    state.workflows[idx].stage = 'recovery';
+    state.workflows[idx].timestamp = Date.now();
+  } else {
+    state.workflows.push({ student, stage: 'recovery', timestamp: Date.now() });
+  }
+  saveStore(state);
+};
+
+export const getWorkflows = () => {
+  return getStore().workflows || [];
 };
