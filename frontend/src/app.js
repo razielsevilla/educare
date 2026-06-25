@@ -1,4 +1,4 @@
-import { getStore, saveStore, addStudent, fillMockData, getStudents, getAssessments, getSubmissions, getAttState } from './store.js';
+import { getStore, saveStore, addStudent, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows } from './store.js';
 import { registerTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 
 // Expose store globally so inline scripts in index.html still work without breaking
@@ -7,6 +7,9 @@ window.saveStore = saveStore;
 window.pushSync = () => { pushSync(); if(window.renderDynamicScreens) window.renderDynamicScreens(); };
 window.addStudent = (name) => { addStudent(name); window.pushSync(); };
 window.fillMockData = () => { fillMockData(); window.pushSync(); location.reload(); };
+window.clearLocalState = () => { localStorage.clear(); location.reload(); };
+window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
+window.getWorkflows = getWorkflows;
 
 // Risk Computation Engine
 window.computeRisk = (student) => {
@@ -84,6 +87,9 @@ window.getStoreAttState = getAttState;
 
 window.renderDynamicScreens = () => {
   const students = getStudents();
+  const workflows = getWorkflows();
+  const recoveryStudentsList = workflows.filter(w => w.stage === 'recovery').map(w => w.student);
+
   let critical = [];
   let flagged = [];
   let monitoring = [];
@@ -92,11 +98,65 @@ window.renderDynamicScreens = () => {
   students.forEach(s => {
     const { tier, reasons } = window.computeRisk(s);
     const obj = { name: s, initials: s.split(' ').map(x=>x[0]).join('').substring(0,2), reasons };
-    if (tier === 'critical') critical.push(obj);
-    else if (tier === 'flagged') flagged.push(obj);
-    else if (tier === 'monitoring') monitoring.push(obj);
-    else clear.push(obj);
+    
+    if (recoveryStudentsList.includes(s)) {
+      monitoring.push(obj);
+    } else {
+      if (tier === 'critical') critical.push(obj);
+      else if (tier === 'flagged') flagged.push(obj);
+      else if (tier === 'monitoring') flagged.push(obj); // Place in Discovery/Flagged first
+      else clear.push(obj);
+    }
   });
+
+  // Update Dashboard Class Switcher
+  const classNameEl = document.getElementById('dash-class-name');
+  const classTypeEl = document.getElementById('dash-class-type');
+  if (classNameEl && classTypeEl) {
+    if (students.length === 0) {
+      classNameEl.textContent = 'No Class Selected';
+      classTypeEl.innerHTML = '<i class="ti ti-alert-circle" style="color:var(--neutral-400);"></i> Tap to Populate';
+    } else {
+      const currentClass = window.currentClass || { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+      classNameEl.textContent = currentClass.name;
+      if (currentClass.isAdvisory) {
+        classTypeEl.innerHTML = '<i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class';
+      } else {
+        classTypeEl.innerHTML = '<i class="ti ti-book" style="color:var(--info);"></i> Subject Class';
+      }
+    }
+  }
+
+  // Update Dashboard Class Health numbers
+  const discoveredEl = document.getElementById('dash-health-discovered');
+  const responsesEl = document.getElementById('dash-health-responses');
+  const recoveryEl = document.getElementById('dash-health-recovery');
+  if (discoveredEl) discoveredEl.textContent = students.length === 0 ? '0' : (critical.length + flagged.length);
+  if (responsesEl) responsesEl.textContent = students.length === 0 ? '0' : critical.length;
+  if (recoveryEl) recoveryEl.textContent = students.length === 0 ? '0' : monitoring.length;
+
+  // Update Discovery Screen Subtitle
+  const discoverySubEl = document.getElementById('discovery-header-sub');
+  if (discoverySubEl) {
+    if (students.length === 0) {
+      discoverySubEl.textContent = 'No students loaded';
+    } else {
+      const currentClass = window.currentClass || { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+      const totalDiscovery = critical.length + flagged.length;
+      discoverySubEl.textContent = `${totalDiscovery} students flagged · ${currentClass.name}`;
+    }
+  }
+
+  // Update Roster Screen Subtitle
+  const rosterSubEl = document.querySelector('#screen-students .screen-header-sub');
+  if (rosterSubEl) {
+    if (students.length === 0) {
+      rosterSubEl.textContent = 'No students loaded';
+    } else {
+      const currentClass = window.currentClass || { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+      rosterSubEl.textContent = `${currentClass.name} · ${students.length} students`;
+    }
+  }
 
   // Render Roster
   const rosterContainer = document.getElementById('rosterContainer');
@@ -221,19 +281,17 @@ window.renderDynamicScreens = () => {
     recoveryContainer.innerHTML = html;
   }
 
-  // Update navbar badges if they exist
-  const discoveryBadge = document.querySelector('.nav-item[data-target="screen-discovery"] .nav-badge');
-  if (discoveryBadge) {
-    const totalDiscovery = critical.length + flagged.length;
-    discoveryBadge.style.display = totalDiscovery > 0 ? 'flex' : 'none';
-    discoveryBadge.textContent = totalDiscovery;
-  }
+  // Update navbar badges dynamically across all screens
+  const totalDiscovery = critical.length + flagged.length;
+  document.querySelectorAll('.nav-item[data-target="screen-discovery"] .nav-badge').forEach(badge => {
+    badge.style.display = totalDiscovery > 0 ? 'flex' : 'none';
+    badge.textContent = totalDiscovery;
+  });
 
-  const responseBadge = document.querySelector('.nav-item[data-target="screen-response"] .nav-badge');
-  if (responseBadge) {
-    responseBadge.style.display = critical.length > 0 ? 'flex' : 'none';
-    responseBadge.textContent = critical.length;
-  }
+  document.querySelectorAll('.nav-item[data-target="screen-response"] .nav-badge').forEach(badge => {
+    badge.style.display = critical.length > 0 ? 'flex' : 'none';
+    badge.textContent = critical.length;
+  });
 };
 
 // Example of integrating with the UI
