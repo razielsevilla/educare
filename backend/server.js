@@ -12,11 +12,26 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'educare-dev-secret-change-me';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ENCRYPTED_BLOB_PREFIX = 'enc:v1:';
 
 app.use(cors());
 app.use(express.json());
 
 const isValidTeacherId = (teacherId) => typeof teacherId === 'string' && UUID_PATTERN.test(teacherId);
+const isEncryptedBlob = (value) => {
+  if (typeof value !== 'string' || !value.startsWith(ENCRYPTED_BLOB_PREFIX)) {
+    return false;
+  }
+
+  try {
+    const encoded = value.slice(ENCRYPTED_BLOB_PREFIX.length);
+    const json = Buffer.from(encoded, 'base64').toString('utf8');
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === 'object' && parsed.v === 1 && typeof parsed.iv === 'string' && typeof parsed.salt === 'string' && typeof parsed.ct === 'string';
+  } catch (err) {
+    return false;
+  }
+};
 
 const getBearerToken = (req) => {
   const authHeader = req.headers.authorization || '';
@@ -54,8 +69,8 @@ app.post('/api/sync/push', (req, res) => {
     return res.status(400).json({ error: 'A valid teacherId is required' });
   }
 
-  if (typeof blobData !== 'string' || blobData.length === 0 || blobData.length > 1000000) {
-    return res.status(400).json({ error: 'blobData must be a non-empty string under 1MB' });
+  if (!isEncryptedBlob(blobData)) {
+    return res.status(400).json({ error: 'blobData must be an encrypted payload in the enc:v1 format' });
   }
 
   const auth = authenticateTeacher(req, teacherId);

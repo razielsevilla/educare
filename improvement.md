@@ -24,11 +24,11 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [database.js:21-23](backend/database.js#L21) (comment claims "zero-knowledge" encrypted blobs), [sync.js:36-46](frontend/src/sync.js#L36) (sends plain `JSON.stringify`), no crypto dependency in either `package.json`.
 **Problem:** The backend is documented as storing only encrypted, opaque blobs, but no encryption exists anywhere in the stack. Student attendance/scores/workflow data currently travels and is stored as plaintext JSON.
 **Acceptance Criteria:**
-- [ ] `blobData` received by `/api/sync/push` is verified (e.g. via a format/length check or an explicit "encrypted envelope" schema) to be ciphertext, not raw JSON — the server must not be able to trivially deserialize it as plaintext.
-- [ ] The server has no key material capable of decrypting the blob (key lives client-side only, e.g. derived from the teacher's PIN/passphrase via a KDF).
-- [ ] `backend/educare.db`'s `sync_blobs.blobData` column, when inspected directly, contains no readable student names, scores, or notes.
-- [ ] Decryption round-trips correctly on the client that produced it (push then pull then decrypt reproduces the original state) — covered by a test.
-- [ ] README/docs are updated to describe the encryption scheme actually implemented (algorithm, key derivation, what "zero-knowledge" means here) so the claim is accurate going forward.
+- [x] `blobData` received by `/api/sync/push` is verified (e.g. via a format/length check or an explicit "encrypted envelope" schema) to be ciphertext, not raw JSON — the server must not be able to trivially deserialize it as plaintext.
+- [x] The server has no key material capable of decrypting the blob (key lives client-side only, e.g. derived from the teacher's PIN/passphrase via a KDF).
+- [x] `backend/educare.db`'s `sync_blobs.blobData` column, when inspected directly, contains no readable student names, scores, or notes.
+- [x] Decryption round-trips correctly on the client that produced it (push then pull then decrypt reproduces the original state) — covered by a test.
+- [x] README/docs are updated to describe the encryption scheme actually implemented (algorithm, key derivation, what "zero-knowledge" means here) so the claim is accurate going forward.
 
 ### BE-3 — Harden CORS and add rate limiting
 **Priority:** P1

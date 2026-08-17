@@ -1,4 +1,5 @@
 // src/store.js
+import { encryptSyncBlob, decryptSyncBlob, looksLikeEncryptedBlob } from './crypto.js';
 
 const STORE_KEY = 'educare_local_state';
 
@@ -125,29 +126,47 @@ export const fillMockData = () => {
   saveStore(state);
 };
 
-// Returns the full blob for syncing
-export const getSyncBlob = () => {
+// Returns the encrypted blob for syncing.
+export const getSyncBlob = async () => {
   const state = getStore();
-  // Strip out local-only fields if needed, but for now send everything
-  return JSON.stringify({
+  const passphrase = state.pin || '';
+  if (!state.teacherId) {
+    throw new Error('teacherId is required before syncing encrypted state');
+  }
+  if (!passphrase) {
+    throw new Error('PIN/passphrase is required to derive the sync encryption key');
+  }
+
+  return encryptSyncBlob(JSON.stringify({
     attState: state.attState,
     assessScores: state.assessScores,
     workflows: state.workflows
-  });
+  }), passphrase, state.teacherId);
 };
 
-export const applySyncBlob = (blobStr, newSyncId) => {
+export const applySyncBlob = async (blobStr, newSyncId) => {
   try {
-    const remoteData = JSON.parse(blobStr);
     const state = getStore();
-    // Merge logic: simple overwrite for V1
+    if (!looksLikeEncryptedBlob(blobStr)) {
+      throw new Error('Blob is not an encrypted EduCare sync payload');
+    }
+
+    const passphrase = state.pin || '';
+    if (!passphrase) {
+      throw new Error('PIN/passphrase is required to decrypt the sync payload');
+    }
+
+    const decrypted = await decryptSyncBlob(blobStr, passphrase, state.teacherId);
+    const remoteData = JSON.parse(decrypted);
     state.attState = { ...state.attState, ...remoteData.attState };
     state.assessScores = { ...state.assessScores, ...remoteData.assessScores };
     state.workflows = remoteData.workflows || state.workflows;
     state.lastSyncId = newSyncId;
     saveStore(state);
+    return true;
   } catch (e) {
     console.error('Failed to apply sync blob', e);
+    return false;
   }
 };
 

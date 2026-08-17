@@ -34,9 +34,9 @@ export const pushSync = async () => {
   const state = getStore();
   if (!state.teacherId) return;
 
-  const blobData = getSyncBlob();
-
   try {
+    const blobData = await getSyncBlob();
+
     const res = await fetch(`${API_BASE}/sync/push`, {
       method: 'POST',
       headers: {
@@ -72,9 +72,11 @@ export const pullSync = async () => {
     const data = await res.json();
     if (data.status === 'success' && data.data && data.data.length > 0) {
       const latestBlob = data.data[data.data.length - 1];
-      applySyncBlob(latestBlob.blobData, latestBlob.id);
-      console.log('Successfully pulled remote changes.');
-      return true;
+      const updated = await applySyncBlob(latestBlob.blobData, latestBlob.id);
+      if (updated) {
+        console.log('Successfully pulled remote changes.');
+      }
+      return updated;
     }
     return false;
   } catch (err) {

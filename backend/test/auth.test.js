@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { encryptSyncBlob } from '../../frontend/src/crypto.js';
 
 const originalDbPath = process.env.EDUCARE_DB_PATH;
 const TEST_DB_PATH = ':memory:';
@@ -66,14 +67,12 @@ describe('EduCare auth & sync API', () => {
 
     const teacherId = registerRes.body.teacherId;
     const token = registerRes.body.token;
+    const blobData = await encryptSyncBlob(JSON.stringify({ attState: { 'Student A': 'P' }, assessScores: {}, workflows: [] }), 'teacher-passphrase', teacherId);
 
     const pushRes = await request(app)
       .post('/api/sync/push')
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        teacherId,
-        blobData: JSON.stringify({ attState: { 'Student A': 'P' }, assessScores: {}, workflows: [] })
-      });
+      .send({ teacherId, blobData });
 
     expect(pushRes.status).toBe(200);
     expect(pushRes.body.status).toBe('success');
@@ -86,17 +85,18 @@ describe('EduCare auth & sync API', () => {
     });
 
     const teacherId = registerRes.body.teacherId;
+    const blobData = await encryptSyncBlob(JSON.stringify({ attState: {} }), 'teacher-passphrase', teacherId);
 
     const missingTokenRes = await request(app)
       .post('/api/sync/push')
-      .send({ teacherId, blobData: JSON.stringify({ attState: {} }) });
+      .send({ teacherId, blobData });
 
     expect(missingTokenRes.status).toBe(401);
 
     const wrongTokenRes = await request(app)
       .post('/api/sync/push')
       .set('Authorization', 'Bearer invalid-token')
-      .send({ teacherId, blobData: JSON.stringify({ attState: {} }) });
+      .send({ teacherId, blobData });
 
     expect(wrongTokenRes.status).toBe(403);
   });
@@ -111,12 +111,15 @@ describe('EduCare auth & sync API', () => {
       password: 'BravoPass2!'
     });
 
+    const blobA = await encryptSyncBlob(JSON.stringify({ attState: { Alice: 'P' }, assessScores: {}, workflows: [] }), 'teacher-passphrase', teacherA.body.teacherId);
+    const blobB = await encryptSyncBlob(JSON.stringify({ attState: { Bob: 'A' }, assessScores: {}, workflows: [] }), 'teacher-passphrase', teacherB.body.teacherId);
+
     await request(app)
       .post('/api/sync/push')
       .set('Authorization', `Bearer ${teacherA.body.token}`)
       .send({
         teacherId: teacherA.body.teacherId,
-        blobData: JSON.stringify({ attState: { Alice: 'P' }, assessScores: {}, workflows: [] })
+        blobData: blobA
       });
 
     await request(app)
@@ -124,7 +127,7 @@ describe('EduCare auth & sync API', () => {
       .set('Authorization', `Bearer ${teacherB.body.token}`)
       .send({
         teacherId: teacherB.body.teacherId,
-        blobData: JSON.stringify({ attState: { Bob: 'A' }, assessScores: {}, workflows: [] })
+        blobData: blobB
       });
 
     const pullRes = await request(app)
@@ -134,7 +137,7 @@ describe('EduCare auth & sync API', () => {
 
     expect(pullRes.status).toBe(200);
     expect(pullRes.body.data).toHaveLength(1);
-    expect(pullRes.body.data[0].blobData).toContain('Alice');
+    expect(pullRes.body.data[0].blobData).toMatch(/^enc:v1:/);
     expect(pullRes.body.data[0].blobData).not.toContain('Bob');
   });
 });

@@ -227,10 +227,16 @@ The system knows where it is in the school year relative to configured quarter b
 - Care history is preserved across school years and teacher transitions
 
 ### Security and Privacy
-- All student data encrypted on-device
+- All student data encrypted on-device before sync
+- Sync payloads are encrypted with AES-GCM using a key derived from the teacher PIN/passphrase via PBKDF2
 - App locked via PIN or biometric authentication
 - No student data transmitted to third parties
 - Data sync is opt-in and scoped to backup only
+
+### Zero-Knowledge Sync Design
+EduCare uses a client-side encryption scheme for sync payloads. Before any blob is sent to the backend, the app serializes the local state, derives an AES-256-GCM key from the teacher's PIN/passphrase using PBKDF2, and encrypts the JSON payload with a random per-message IV. The backend only stores the resulting opaque `enc:v1:<base64>` string and never sees the plaintext or key material.
+
+This is a true zero-knowledge sync layer for the specific data being uploaded: the server cannot read, index, or decrypt student attendance, grades, workflow records, or notes. Decryption happens only on the teacher's device after a pull, using the same passphrase-derived key.
 
 ---
 
