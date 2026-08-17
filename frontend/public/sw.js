@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Always go network for backend API sync calls
-  if (url.hostname === 'localhost' && url.port === '3000') {
+  if (url.port === '3000') {
     event.respondWith(
       fetch(event.request).catch(() => {
         // API offline — silently fail, app uses localStorage

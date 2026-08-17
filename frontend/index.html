@@ -938,7 +938,8 @@
 
     .pin-keypad {
       width: 100%;
-      padding: 32px 40px 0;
+      max-width: 360px;
+      padding: 32px 24px 0;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
@@ -1739,10 +1740,213 @@
       pointer-events: none;
       box-shadow: 0 0 0 4px rgba(255, 255, 255, 1);
     }
+
+    /* Responsive Dashboard Grid Layout */
+    .dashboard-grid {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      margin-top: 16px;
+    }
+    
+    /* Mobile detail view behavior */
+    @media (max-width: 767px) {
+      .dashboard-side {
+        display: none;
+      }
+      .dashboard-side.active-detail {
+        display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--warm-white);
+        z-index: 200;
+        flex-direction: column;
+        padding: 0 !important;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.6fr 1.4fr;
+        gap: 24px;
+        max-width: 1200px;
+        margin: 24px auto 0;
+        padding: 0 20px 24px;
+        align-items: start;
+      }
+      
+      .dashboard-grid > div {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* Reset container padding on desktop so it aligns perfectly with the outer container grid alignment */
+      .dashboard-main > div, .dashboard-side > div {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+      
+      /* Detail views styled as card panels on desktop */
+      #side-view-attendance, #side-view-assessment, #side-view-behavior {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        min-height: 520px;
+      }
+      
+      /* Default switcher+summary container has no card border around itself */
+      #dash-side-default {
+        background: transparent !important;
+        border: none !important;
+        overflow: visible !important;
+      }
+      
+      .greeting {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 48px 20px 0 !important; /* Keep left/right padding for outer alignment */
+        box-sizing: border-box;
+      }
+    }
+
+    /* Sidebar Navigation (Desktop only) */
+    .sidebar-nav {
+      display: none;
+    }
+    
+    @media (min-width: 768px) {
+      .sidebar-nav-visible .screen {
+        left: 260px !important; /* shift the screen containers to make space */
+        width: calc(100% - 260px) !important;
+      }
+      
+      .sidebar-nav {
+        width: 260px;
+        height: 100dvh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        background: #1e150a; /* Premium dark matching splash and brand color dark */
+        border-right: 1px solid rgba(255,255,255,0.06);
+        display: none; /* toggled by JS classes */
+        flex-direction: column;
+        z-index: 150;
+        padding: 32px 16px;
+        box-sizing: border-box;
+      }
+      
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px 24px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 24px;
+      }
+      
+      .sidebar-logo-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--amber);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #1e150a;
+        font-weight: 700;
+        font-size: 16px;
+      }
+      
+      .sidebar-logo-text {
+        font-family: var(--serif);
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+        letter-spacing: 0.02em;
+      }
+      
+      .sidebar-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+      }
+      
+      .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        color: rgba(255,255,255,0.6);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .sidebar-item i {
+        font-size: 18px;
+        transition: transform 0.2s;
+      }
+      
+      .sidebar-item:hover {
+        color: white;
+        background: rgba(255,255,255,0.04);
+      }
+      
+      .sidebar-item:hover i {
+        transform: scale(1.1);
+      }
+      
+      .sidebar-item.active {
+        color: #1e150a;
+        background: var(--amber);
+      }
+      
+      .sidebar-item.active i {
+        color: #1e150a;
+      }
+      
+      .bottom-nav {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- Sidebar Navigation (Desktop only) -->
+  <div class="sidebar-nav">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo-icon">EC</div>
+      <div class="sidebar-logo-text">EduCare</div>
+    </div>
+    <div class="sidebar-menu">
+      <div class="sidebar-item active" data-target="screen-dashboard" onclick="navTo('screen-dashboard')">
+        <i class="ti ti-home"></i> <span>Home</span>
+      </div>
+      <div class="sidebar-item" data-target="screen-discovery" onclick="navTo('screen-discovery')">
+        <i class="ti ti-radar"></i> <span>Discovery</span>
+      </div>
+      <div class="sidebar-item" data-target="screen-response" onclick="navTo('screen-response')">
+        <i class="ti ti-heart-handshake"></i> <span>Response</span>
+      </div>
+      <div class="sidebar-item" data-target="screen-recovery" onclick="navTo('screen-recovery')">
+        <i class="ti ti-activity"></i> <span>Recovery</span>
+      </div>
+      <div class="sidebar-item" data-target="screen-students" onclick="navTo('screen-students')">
+        <i class="ti ti-users"></i> <span>Roster</span>
+      </div>
+    </div>
+  </div>
 
       <!-- ══════════════════════════════ -->
       <!-- SCREEN: SPLASH -->
@@ -1769,7 +1973,7 @@
         style="background:var(--warm-white);display:none;flex-direction:column;align-items:center;padding-top:80px;">
         <div class="pin-avatar">MF</div>
         <div class="pin-name">Ms. Maria Faraon</div>
-        <div class="pin-sub">Grade 5 — Section Sampaguita</div>
+        <div class="pin-sub">Grade 5 — Section Bayabas</div>
         <div class="pin-dots" id="pinDots">
           <div class="pin-dot" id="d1"></div>
           <div class="pin-dot" id="d2"></div>
@@ -1795,6 +1999,46 @@
       </div>
 
       <!-- ══════════════════════════════ -->
+      <!-- SCREEN: SETUP (CREATE CLASS) -->
+      <!-- ══════════════════════════════ -->
+      <div class="screen" id="screen-setup" style="background:var(--warm-white); display:none; flex-direction:column; align-items:center; justify-content:center; padding: 40px 20px; box-sizing: border-box; overflow-y: auto;">
+        <div style="max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 20px;">
+          <div style="text-align: center; margin-bottom: 10px;">
+            <div class="sidebar-logo-icon" style="margin: 0 auto 12px; width: 48px; height: 48px; font-size: 24px; border-radius: 12px; background:var(--amber); display:flex; align-items:center; justify-content:center; color:#1e150a; font-weight:700;">EC</div>
+            <h2 style="font-family: var(--serif); font-size: 28px; color: var(--deep-brown);">Set up your class</h2>
+            <p style="font-size: 14px; color: var(--mid-brown); margin-top: 4px;">Enter your details to create your first class.</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label class="form-label">Teacher Name</label>
+              <input type="text" id="setup-teacher-name" placeholder="e.g. Ms. Maria Faraon" class="form-input">
+            </div>
+
+            <div>
+              <label class="form-label">Security PIN (4 digits)</label>
+              <input type="password" id="setup-teacher-pin" maxlength="4" placeholder="e.g. 1234" class="form-input" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            </div>
+
+            <div>
+              <label class="form-label">Class / Section Name</label>
+              <input type="text" id="setup-class-name" placeholder="e.g. Grade 5 — Section Bayabas" class="form-input">
+            </div>
+
+            <div>
+              <label class="form-label">Students Roster (Optional)</label>
+              <textarea id="setup-students" placeholder="Enter student names (one per line)" class="form-input" style="height: 120px; resize: none; font-family: var(--sans); line-height: 1.4;"></textarea>
+              <span style="font-size: 11px; color: var(--mid-brown); margin-top: 4px; display: block;">You can also add students later from the Class Roster screen.</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="handleCreateClass()" style="padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 700; width: 100%; border: none; background: var(--amber); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px;">
+            <i class="ti ti-circle-plus" style="font-size: 18px;"></i> Initialize Class
+          </button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════ -->
       <!-- SCREEN: DASHBOARD -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-dashboard">
@@ -1810,92 +2054,272 @@
                 <div style="font-size:12px;color:var(--mid-brown);">Monday, June 16</div>
               </div>
             </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-primary" style="font-size:11px; padding:6px 10px; border-radius:6px; background:var(--info); border:none; color:white; cursor:pointer; height:auto; width:auto; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.fillMockData()">
-                <i class="ti ti-database-import" style="font-size:13px;"></i> Populate
-              </button>
-              <button class="btn-ghost" style="font-size:11px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:white; color:var(--critical); cursor:pointer; height:auto; width:auto; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.clearLocalState()">
-                <i class="ti ti-trash" style="font-size:13px;"></i> Reset
-              </button>
-            </div>
           </div>
 
-          <!-- Class Switcher -->
-          <div style="padding: 16px 20px 16px;">
-            <div
-              style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
-              onclick="openClassSelect()">
-              <div>
-                <div id="dash-class-type"
-                  style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid-brown);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
-                  <i class="ti ti-alert-circle" style="color:var(--neutral-400);"></i> Tap to Populate
-                </div>
-                <div style="font-size:15px;font-weight:700;color:var(--deep-brown);" id="dash-class-name">No Class Selected</div>
-              </div>
-              <i class="ti ti-selector" style="color:var(--neutral-400);font-size:20px;"></i>
-            </div>
-          </div>
-
-          <!-- Class Health (Three Pillars) -->
-          <div style="padding:16px 20px 0;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div
-                style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;">
-                Class health · Q1 Week 6</div>
-            </div>
-            <div class="health-grid" style="grid-template-columns: repeat(3, 1fr);">
-              <div class="health-cell crit" style="cursor: default;">
-                <div class="num" id="dash-health-discovered">0</div>
-                <div class="lbl">Discovered</div>
-              </div>
-              <div class="health-cell flag" style="cursor: default;">
-                <div class="num" id="dash-health-responses">0</div>
-                <div class="lbl">Responses Due</div>
-              </div>
-              <div class="health-cell mon" style="cursor: default;">
-                <div class="num" id="dash-health-recovery">0</div>
-                <div class="lbl">In Recovery</div>
+          <!-- Greeting Notification Banner -->
+          <div id="greeting-notification-banner" style="display: none; max-width: 1200px; margin: 16px auto 0; box-sizing: border-box; width: 100%; padding: 0 20px;">
+            <div style="background: var(--amber-bg); border: 1px solid rgba(212,130,10,0.25); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+              <i class="ti ti-bell-ringing" style="font-size: 20px; color: var(--amber); flex-shrink: 0;"></i>
+              <div style="font-size: 13px; color: var(--deep-brown); line-height: 1.4;" id="greeting-notification-text">
+                Welcome back! You have active tasks requiring attention today.
               </div>
             </div>
           </div>
 
-          <!-- Quick actions -->
-          <div style="padding:16px 20px 16px;" id="tut-quick">
-            <div
-              style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">
-              Quick actions</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div class="card-padded" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
-                onclick="navTo('screen-attendance')">
-                <div
-                  style="width:36px;height:36px;border-radius:9px;background:var(--amber-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <i class="ti ti-calendar-check" style="font-size:20px;color:var(--amber);"></i>
+          <!-- Class Switcher and Info Grid -->
+          <div class="dashboard-grid">
+            <div class="dashboard-main">
+              <!-- Class Health (Three Pillars) -->
+              <div style="padding:16px 20px 0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <div
+                    style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;">
+                    Class health · Q1 Week 6</div>
                 </div>
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Take attendance</div>
-                  <div style="font-size:11px;color:var(--mid-brown);">Not yet marked today</div>
-                </div>
-              </div>
-              <div class="card-padded" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
-                onclick="navTo('screen-assessment')">
-                <div
-                  style="width:36px;height:36px;border-radius:9px;background:var(--info-bg);display:flex;align-items:center;justify-content:center; flex-shrink:0;">
-                  <i class="ti ti-clipboard-list" style="font-size:20px;color:var(--info);"></i>
-                </div>
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Assessments & Homework</div>
-                  <div style="font-size:11px;color:var(--mid-brown);">Manage tasks & grades</div>
+                <div class="health-grid" style="grid-template-columns: repeat(3, 1fr);">
+                  <div class="health-cell crit" style="cursor: default;">
+                    <div class="num" id="dash-health-discovered">0</div>
+                    <div class="lbl">Discovered</div>
+                  </div>
+                  <div class="health-cell flag" style="cursor: default;">
+                    <div class="num" id="dash-health-responses">0</div>
+                    <div class="lbl">Responses Due</div>
+                  </div>
+                  <div class="health-cell mon" style="cursor: default;">
+                    <div class="num" id="dash-health-recovery">0</div>
+                    <div class="lbl">In Recovery</div>
+                  </div>
                 </div>
               </div>
-              <div class="card-padded" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
-                onclick="navTo('screen-behavior')">
+              <!-- Quick actions -->
+              <div style="padding:16px 20px 16px;" id="tut-quick">
                 <div
-                  style="width:36px;height:36px;border-radius:9px;background:var(--flagged-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <i class="ti ti-hand-click" style="font-size:20px;color:var(--flagged);"></i>
+                  style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">
+                  Quick actions</div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div class="card-padded quick-action-card" id="qa-attendance" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
+                    onclick="openDetailView('attendance')">
+                    <div
+                      style="width:36px;height:36px;border-radius:9px;background:var(--amber-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <i class="ti ti-calendar-check" style="font-size:20px;color:var(--amber);"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Take attendance</div>
+                      <div style="font-size:11px;color:var(--mid-brown);">Not yet marked today</div>
+                    </div>
+                  </div>
+                  <div class="card-padded quick-action-card" id="qa-assessment" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
+                    onclick="openDetailView('assessment')">
+                    <div
+                      style="width:36px;height:36px;border-radius:9px;background:var(--info-bg);display:flex;align-items:center;justify-content:center; flex-shrink:0;">
+                      <i class="ti ti-clipboard-list" style="font-size:20px;color:var(--info);"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Assessments & Homework</div>
+                      <div style="font-size:11px;color:var(--mid-brown);">Manage tasks & grades</div>
+                    </div>
+                  </div>
+                  <div class="card-padded quick-action-card" id="qa-behavior" style="cursor:pointer;display:flex;align-items:center;gap:12px;"
+                    onclick="openDetailView('behavior')">
+                    <div
+                      style="width:36px;height:36px;border-radius:9px;background:var(--flagged-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <i class="ti ti-hand-click" style="font-size:20px;color:var(--flagged);"></i>
+                    </div>
+                    <div>
+                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Log Behavior</div>
+                      <div style="font-size:11px;color:var(--mid-brown);">Tag student actions</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Log Behavior</div>
-                  <div style="font-size:11px;color:var(--mid-brown);">Tag student actions</div>
+              </div>
+            </div>
+
+            <div class="dashboard-side">
+              <!-- default view: switcher & stats -->
+              <div id="dash-side-default" style="padding: 16px 20px 16px; width: 100%;">
+                <!-- Class Switcher -->
+                <div
+                  style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;"
+                  onclick="openClassSelect()">
+                  <div>
+                    <div id="dash-class-type"
+                      style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid-brown);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
+                      <i class="ti ti-alert-circle" style="color:var(--neutral-400);"></i> Tap to Populate
+                    </div>
+                    <div style="font-size:15px;font-weight:700;color:var(--deep-brown);" id="dash-class-name">No Class Selected</div>
+                  </div>
+                  <i class="ti ti-selector" style="color:var(--neutral-400);font-size:20px;"></i>
+                </div>
+
+                <!-- Class Summary Card -->
+                <div class="card-padded" style="margin-top: 16px; display: none;" id="dash-class-stats-card">
+                  <div style="font-size: 13px; font-weight: 700; color: var(--mid-brown); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px;">Class Summary</div>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 13px; color: var(--mid-brown);">Attendance Rate</span>
+                      <span style="font-size: 14px; font-weight: 700; color: var(--deep-brown);" id="stat-attendance">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 13px; color: var(--mid-brown);">Homework Compliance</span>
+                      <span style="font-size: 14px; font-weight: 700; color: var(--deep-brown);" id="stat-homework">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 13px; color: var(--mid-brown);">Average Grade</span>
+                      <span style="font-size: 14px; font-weight: 700; color: var(--deep-brown);" id="stat-grades">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- attendance view -->
+              <div id="side-view-attendance" style="display:none; flex-direction:column; height:100%; width:100%;">
+                <div class="top-bar">
+                  <div>
+                    <div class="top-bar-title">Attendance</div>
+                    <div class="top-bar-sub">Monday, June 16 · Section Bayabas</div>
+                  </div>
+                  <div class="icon-btn" onclick="closeDetailView()"><i class="ti ti-x"></i></div>
+                </div>
+                <div class="scroll-area" id="attWorkspace" style="display:flex; flex-direction:column; padding: 0 20px; padding-bottom: 24px;">
+                  <!-- Rendered by JS -->
+                </div>
+              </div>
+
+              <!-- assessment view -->
+              <div id="side-view-assessment" style="display:none; flex-direction:column; height:100%; width:100%; position:relative;">
+                <!-- VIEW: LIST -->
+                <div id="view-assess-list" style="display:flex; flex-direction:column; height:100%;">
+                  <div class="top-bar">
+                    <div>
+                      <div class="top-bar-title">Assessments</div>
+                      <div class="top-bar-sub">Grade 5 — Bayabas</div>
+                    </div>
+                    <div class="icon-btn" onclick="closeDetailView()"><i class="ti ti-x"></i></div>
+                  </div>
+                  <div class="scroll-area" style="padding: 20px;">
+                    <div style="display:flex; justify-content:flex-end; margin-bottom: 20px;">
+                      <button class="btn-primary btn-sm" onclick="showAssessCreate()"><i class="ti ti-plus"></i> Add New</button>
+                    </div>
+                    <div id="assessmentsContainer">
+                      <!-- Rendered by JS -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- VIEW: CREATE -->
+                <div id="view-assess-create" style="display:none; flex-direction:column; height:100%; background:var(--card-bg); z-index:100; position:absolute; top:0; left:0; width:100%;">
+                  <div class="top-bar">
+                    <div class="back-btn" onclick="showAssessList()"><i class="ti ti-chevron-left"></i></div>
+                    <div style="text-align:center;flex:1;">
+                      <div class="top-bar-title">New Assessment</div>
+                    </div>
+                    <div style="width:36px;"></div>
+                  </div>
+                  <div class="scroll-area" style="padding: 20px;">
+                    <label class="form-label">Assessment Name</label>
+                    <input class="form-input" id="newAssessName" placeholder="e.g. Fractions Worksheet" style="margin-bottom:16px;">
+                    
+                    <label class="form-label">Type</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+                      <div class="card" id="btnTypeInClass" style="text-align:center; padding:12px; cursor:pointer; border-color:var(--amber);" onclick="setAssessType('in-class')">
+                        <i class="ti ti-school" style="font-size:24px; color:var(--amber); margin-bottom:4px;"></i>
+                        <div style="font-size:13px; font-weight:600; color:var(--deep-brown);">In-Class</div>
+                        <div style="font-size:11px; color:var(--mid-brown);">Quiz, Exam, Recitation</div>
+                      </div>
+                      <div class="card" id="btnTypeTakeHome" style="text-align:center; padding:12px; cursor:pointer;" onclick="setAssessType('take-home')">
+                        <i class="ti ti-home" style="font-size:24px; color:var(--mid-brown); margin-bottom:4px;"></i>
+                        <div style="font-size:13px; font-weight:600; color:var(--deep-brown);">Take-Home</div>
+                        <div style="font-size:11px; color:var(--mid-brown);">Homework, Project</div>
+                      </div>
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px;">
+                      <div>
+                        <label class="form-label">Max Score</label>
+                        <input class="form-input" id="newAssessMax" type="number" value="100">
+                      </div>
+                      <div>
+                        <label class="form-label">Due Date</label>
+                        <input class="form-input" id="newAssessDue" type="date">
+                      </div>
+                    </div>
+                    
+                    <button class="btn-primary" onclick="createAssessment()"><i class="ti ti-check"></i> Create Assessment</button>
+                  </div>
+                </div>
+
+                <!-- VIEW: GRADE -->
+                <div id="view-assess-grade" style="display:none; flex-direction:column; height:100%; background:var(--card-bg); z-index:100; position:absolute; top:0; left:0; width:100%;">
+                  <div class="top-bar">
+                    <div class="back-btn" onclick="showAssessList()"><i class="ti ti-chevron-left"></i></div>
+                    <div style="text-align:center;flex:1;">
+                      <div class="top-bar-title" id="gradeTitle">...</div>
+                      <div class="top-bar-sub" id="gradeSub">...</div>
+                    </div>
+                    <div style="width:36px;"></div>
+                  </div>
+                  <div class="scroll-area" id="gradeListContainer" style="padding-bottom: 80px;">
+                     <!-- Rendered by JS -->
+                  </div>
+                  <div style="padding:10px 20px 8px;flex-shrink:0; background:var(--card-bg); border-top:1px solid var(--border-light); position:absolute; bottom:0; width:100%;">
+                    <button class="btn-primary" onclick="saveGrades()"><i class="ti ti-device-floppy"></i> Save Scores</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- behavior view -->
+              <div id="side-view-behavior" style="display:none; flex-direction:column; height:100%; width:100%; position:relative;">
+                <div class="top-bar">
+                  <div>
+                    <div class="top-bar-title">Log Behavior</div>
+                    <div class="top-bar-sub">Grade 5 — Bayabas</div>
+                  </div>
+                  <div class="icon-btn" onclick="closeDetailView()"><i class="ti ti-x"></i></div>
+                </div>
+                <div class="scroll-area" style="padding: 20px;">
+                  <div style="font-size:12px;color:var(--mid-brown);margin-bottom:16px;text-align:center;">Select a student to log behavior</div>
+                  <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;" id="behavior-grid">
+                    <!-- Rendered by JS -->
+                  </div>
+                </div>
+
+                <!-- BOTTOM SHEET OVERLAY (re-contained within detail view) -->
+                <div id="behavior-overlay" style="display:none; position:absolute; inset:0; background:rgba(26,18,8,0.7); z-index:200;" onclick="closeBehaviorSheet()"></div>
+                <div id="behavior-sheet" class="sheet" style="position:absolute; bottom:-100%; left:0; width:100%; z-index:201; transition:bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); background:white;">
+                  <div class="sheet-handle"></div>
+                  <div style="text-align:center; margin-bottom:16px;">
+                    <div id="behavior-sheet-avatar" class="avatar avatar-md" style="margin:0 auto 8px;"></div>
+                    <div class="sheet-title" id="behavior-sheet-name">Student Name</div>
+                    <div style="font-size:13px; color:var(--mid-brown);">Log quick signal</div>
+                  </div>
+                  
+                  <div style="padding:0 20px;">
+                    <div style="font-size:11px; font-weight:700; color:var(--critical); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Concerns</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Withdrawn')">
+                        <span style="font-size:24px;">🌧️</span> <span style="font-size:12px; color:var(--deep-brown);">Withdrawn</span>
+                      </button>
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Sleeping')">
+                        <span style="font-size:24px;">💤</span> <span style="font-size:12px; color:var(--deep-brown);">Sleeping</span>
+                      </button>
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Disruptive')">
+                        <span style="font-size:24px;">🌪️</span> <span style="font-size:12px; color:var(--deep-brown);">Disruptive</span>
+                      </button>
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Unprepared')">
+                        <span style="font-size:24px;">🎒</span> <span style="font-size:12px; color:var(--deep-brown);">Unprepared</span>
+                      </button>
+                    </div>
+                    
+                    <div style="font-size:11px; font-weight:700; color:var(--clear); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Positives</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Highly Engaged')">
+                        <span style="font-size:24px;">⭐</span> <span style="font-size:12px; color:var(--deep-brown);">Engaged</span>
+                      </button>
+                      <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Helped Peer')">
+                        <span style="font-size:24px;">🤝</span> <span style="font-size:12px; color:var(--deep-brown);">Helped Peer</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1929,24 +2353,30 @@
       <!-- SCREEN: STUDENTS LIST -->
       <!-- ══════════════════════════════ -->
       <div class="screen" id="screen-students">
-        <div class="screen-header">
-          <div class="screen-header-eyebrow">Class Roster</div>
-          <div class="screen-header-title">Students</div>
-          <div class="screen-header-sub">Grade 5 — Section Sampaguita · 43 students</div>
+        <div class="screen-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div class="screen-header-eyebrow">Class Roster</div>
+            <div class="screen-header-title">Students</div>
+            <div class="screen-header-sub" id="roster-class-name">No Class Selected</div>
+          </div>
+          <button class="btn-primary" style="font-size: 12px; padding: 8px 12px; border-radius: 8px; background: var(--amber); border: none; color: white; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 700; width: auto; height: auto;" onclick="openAddStudentModal()">
+            <i class="ti ti-plus" style="font-size: 14px;"></i> Add Student
+          </button>
         </div>
-        <div style="padding:0 20px 10px;flex-shrink:0;">
+        <div style="padding:16px 20px 10px;flex-shrink:0;">
           <div style="position:relative;" id="stu-search">
             <i class="ti ti-search"
               style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--neutral-400);font-size:17px;"></i>
-            <input class="form-input" placeholder="Search getStoreStudents()..."
-              style="padding-left:38px;padding-top:10px;padding-bottom:10px;" readonly>
+            <input class="form-input" placeholder="Search students by name..."
+              style="padding-left:38px;padding-top:10px;padding-bottom:10px;"
+              oninput="handleRosterSearch(this.value)">
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;">
-            <button class="btn-sm" style="white-space:nowrap;padding:6px 14px;font-size:12px;">All</button>
-            <button class="btn-sm-ghost" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Critical</button>
-            <button class="btn-sm-ghost" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Flagged</button>
-            <button class="btn-sm-ghost" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Monitoring</button>
-            <button class="btn-sm-ghost" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Clear</button>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <button class="btn-sm" onclick="setRosterFilter('All', this)" style="white-space:nowrap;padding:6px 14px;font-size:12px;">All</button>
+            <button class="btn-sm-ghost" onclick="setRosterFilter('Critical', this)" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Critical</button>
+            <button class="btn-sm-ghost" onclick="setRosterFilter('Flagged', this)" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Flagged</button>
+            <button class="btn-sm-ghost" onclick="setRosterFilter('Monitoring', this)" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Monitoring</button>
+            <button class="btn-sm-ghost" onclick="setRosterFilter('Clear', this)" style="white-space:nowrap;padding:5px 12px;font-size:12px;">Clear</button>
           </div>
         </div>
         <div class="scroll-area" id="rosterContainer" style="padding-bottom:100px;">
@@ -2200,166 +2630,7 @@
         </div>
       </div>
 
-      <!-- ══════════════════════════════ -->
-      <!-- SCREEN: ATTENDANCE -->
-      <!-- ══════════════════════════════ -->
-      <div class="screen" id="screen-attendance">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Attendance</div>
-            <div class="top-bar-sub">Monday, June 16 · Section Sampaguita</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
-        </div>
-
-        <div class="scroll-area" id="attWorkspace" style="display:flex; flex-direction:column; padding: 0 20px;">
-          <!-- Rendered by JS -->
-        </div>
-
-      </div>
-
-      <!-- ══════════════════════════════ -->
-      <!-- ══════════════════════════════ -->
-      <!-- SCREEN: ASSESSMENTS -->
-      <!-- ══════════════════════════════ -->
-      <div class="screen" id="screen-assessment">
-        <!-- VIEW: LIST -->
-        <div id="view-assess-list" style="display:flex; flex-direction:column; height:100%;">
-          <div class="top-bar">
-            <div>
-              <div class="top-bar-title">Assessments</div>
-              <div class="top-bar-sub">Grade 5 — Sampaguita</div>
-            </div>
-            <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
-          </div>
-          <div class="scroll-area" style="padding: 20px;">
-            <div style="display:flex; justify-content:flex-end; margin-bottom: 20px;">
-              <button class="btn-primary btn-sm" onclick="showAssessCreate()"><i class="ti ti-plus"></i> Add New</button>
-            </div>
-            <div id="assessmentsContainer">
-              <!-- Rendered by JS -->
-            </div>
-          </div>
-        </div>
-
-        <!-- VIEW: CREATE -->
-        <div id="view-assess-create" style="display:none; flex-direction:column; height:100%; background:white; z-index:100; position:absolute; top:0; left:0; width:100%;">
-          <div class="top-bar">
-            <div class="back-btn" onclick="showAssessList()"><i class="ti ti-chevron-left"></i></div>
-            <div style="text-align:center;flex:1;">
-              <div class="top-bar-title">New Assessment</div>
-            </div>
-            <div style="width:36px;"></div>
-          </div>
-          <div class="scroll-area" style="padding: 20px;">
-            <label class="form-label">Assessment Name</label>
-            <input class="form-input" id="newAssessName" placeholder="e.g. Fractions Worksheet" style="margin-bottom:16px;">
-            
-            <label class="form-label">Type</label>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
-              <div class="card" id="btnTypeInClass" style="text-align:center; padding:12px; cursor:pointer; border-color:var(--amber);" onclick="setAssessType('in-class')">
-                <i class="ti ti-school" style="font-size:24px; color:var(--amber); margin-bottom:4px;"></i>
-                <div style="font-size:13px; font-weight:600; color:var(--deep-brown);">In-Class</div>
-                <div style="font-size:11px; color:var(--mid-brown);">Quiz, Exam, Recitation</div>
-              </div>
-              <div class="card" id="btnTypeTakeHome" style="text-align:center; padding:12px; cursor:pointer;" onclick="setAssessType('take-home')">
-                <i class="ti ti-home" style="font-size:24px; color:var(--mid-brown); margin-bottom:4px;"></i>
-                <div style="font-size:13px; font-weight:600; color:var(--deep-brown);">Take-Home</div>
-                <div style="font-size:11px; color:var(--mid-brown);">Homework, Project</div>
-              </div>
-            </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px;">
-              <div>
-                <label class="form-label">Max Score</label>
-                <input class="form-input" id="newAssessMax" type="number" value="100">
-              </div>
-              <div>
-                <label class="form-label">Due Date</label>
-                <input class="form-input" id="newAssessDue" type="date">
-              </div>
-            </div>
-            
-            <button class="btn-primary" onclick="createAssessment()"><i class="ti ti-check"></i> Create Assessment</button>
-          </div>
-        </div>
-
-        <!-- VIEW: GRADE -->
-        <div id="view-assess-grade" style="display:none; flex-direction:column; height:100%; background:white; z-index:100; position:absolute; top:0; left:0; width:100%;">
-          <div class="top-bar">
-            <div class="back-btn" onclick="showAssessList()"><i class="ti ti-chevron-left"></i></div>
-            <div style="text-align:center;flex:1;">
-              <div class="top-bar-title" id="gradeTitle">...</div>
-              <div class="top-bar-sub" id="gradeSub">...</div>
-            </div>
-            <div style="width:36px;"></div>
-          </div>
-          <div class="scroll-area" id="gradeListContainer" style="padding-bottom: 80px;">
-             <!-- Rendered by JS -->
-          </div>
-          <div style="padding:10px 20px 8px;flex-shrink:0; background:white; border-top:1px solid var(--border-light); position:absolute; bottom:0; width:100%;">
-            <button class="btn-primary" onclick="saveGrades()"><i class="ti ti-device-floppy"></i> Save Scores</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════ -->
-      <!-- SCREEN: 1-TAP BEHAVIOR -->
-      <!-- ══════════════════════════════ -->
-      <div class="screen" id="screen-behavior">
-        <div class="top-bar">
-          <div>
-            <div class="top-bar-title">Log Behavior</div>
-            <div class="top-bar-sub">Grade 5 — Sampaguita</div>
-          </div>
-          <div class="icon-btn" onclick="navTo('screen-dashboard')"><i class="ti ti-x"></i></div>
-        </div>
-        <div class="scroll-area" style="padding: 20px;">
-          <div style="font-size:12px;color:var(--mid-brown);margin-bottom:16px;text-align:center;">Select a student to log behavior</div>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;" id="behavior-grid">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <!-- BOTTOM SHEET OVERLAY -->
-        <div id="behavior-overlay" style="display:none; position:absolute; inset:0; background:rgba(26,18,8,0.7); z-index:200;" onclick="closeBehaviorSheet()"></div>
-        <div id="behavior-sheet" class="sheet" style="position:absolute; bottom:-100%; left:0; width:100%; z-index:201; transition:bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); background:white;">
-          <div class="sheet-handle"></div>
-          <div style="text-align:center; margin-bottom:16px;">
-            <div id="behavior-sheet-avatar" class="avatar avatar-md" style="margin:0 auto 8px;"></div>
-            <div class="sheet-title" id="behavior-sheet-name">Student Name</div>
-            <div style="font-size:13px; color:var(--mid-brown);">Log quick signal</div>
-          </div>
-          
-          <div style="padding:0 20px;">
-            <div style="font-size:11px; font-weight:700; color:var(--critical); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Concerns</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Withdrawn')">
-                <span style="font-size:24px;">🌧️</span> <span style="font-size:12px; color:var(--deep-brown);">Withdrawn</span>
-              </button>
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Sleeping')">
-                <span style="font-size:24px;">💤</span> <span style="font-size:12px; color:var(--deep-brown);">Sleeping</span>
-              </button>
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Disruptive')">
-                <span style="font-size:24px;">🌪️</span> <span style="font-size:12px; color:var(--deep-brown);">Disruptive</span>
-              </button>
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Unprepared')">
-                <span style="font-size:24px;">🎒</span> <span style="font-size:12px; color:var(--deep-brown);">Unprepared</span>
-              </button>
-            </div>
-            
-            <div style="font-size:11px; font-weight:700; color:var(--clear); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">Positives</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Highly Engaged')">
-                <span style="font-size:24px;">⭐</span> <span style="font-size:12px; color:var(--deep-brown);">Engaged</span>
-              </button>
-              <button class="btn-ghost" style="height:auto; padding:12px; display:flex; flex-direction:column; gap:6px; align-items:center;" onclick="logBehavior('Helped Peer')">
-                <span style="font-size:24px;">🤝</span> <span style="font-size:12px; color:var(--deep-brown);">Helped Peer</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Sub-views are now moved to the dashboard side pane. Standalone screens removed. -->
 
       <!-- ══════════════════════════════ -->
       <!-- SCREEN: ALERTS / EWS -->
@@ -2923,6 +3194,27 @@
         <div id="class-options-container"></div>
       </div>
 
+      <!-- Add Student Modal -->
+      <div class="overlay" id="add-student-overlay"
+        style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:90;"
+        onclick="closeAddStudentModal()"></div>
+      <div id="add-student-modal"
+        style="display:none;position:absolute;bottom:0;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;z-index:100;box-shadow:0 -10px 40px rgba(0,0,0,0.1);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);">
+        <div style="width:40px;height:5px;background:var(--border-light);border-radius:3px;margin:0 auto 20px;"></div>
+        <div
+          style="font-family:var(--serif);font-size:20px;font-weight:700;color:var(--deep-brown);margin-bottom:16px;">
+          Add New Student</div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div>
+            <label class="form-label">Student's Full Name</label>
+            <input type="text" id="new-student-name" placeholder="e.g. Juan Dela Cruz" class="form-input" onkeydown="if(event.key === 'Enter') handleAddStudent()">
+          </div>
+          <button class="btn-primary" onclick="handleAddStudent()" style="padding: 12px; font-weight: 700; width:100%;">
+            Add Student to Roster
+          </button>
+        </div>
+      </div>
+
       <!-- TOAST -->
       <div class="toast" id="toast">
         <i class="ti ti-check" style="font-size:18px;color:var(--amber-light);"></i>
@@ -3147,8 +3439,74 @@
     }
     // ───────────────────────
 
+    // ── SPLIT-SCREEN DETAIL PANE CONTROLLER ──
+    function openDetailView(viewName) {
+      const sidePanel = document.querySelector('.dashboard-side');
+      if (sidePanel) {
+        sidePanel.classList.add('active-detail');
+      }
+      
+      const defaultView = document.getElementById('dash-side-default');
+      const attView = document.getElementById('side-view-attendance');
+      const assessView = document.getElementById('side-view-assessment');
+      const behaviorView = document.getElementById('side-view-behavior');
+      
+      if (defaultView) defaultView.style.display = 'none';
+      if (attView) attView.style.display = 'none';
+      if (assessView) assessView.style.display = 'none';
+      if (behaviorView) behaviorView.style.display = 'none';
+      
+      document.querySelectorAll('.quick-action-card').forEach(card => {
+        card.style.borderColor = 'var(--border)';
+        card.style.background = 'var(--card-bg)';
+      });
+      
+      const activeCard = document.getElementById(`qa-${viewName}`);
+      if (activeCard) {
+        activeCard.style.borderColor = 'var(--amber)';
+        activeCard.style.background = 'var(--amber-bg)';
+      }
+      
+      if (viewName === 'attendance') {
+        if (attView) attView.style.display = 'flex';
+        attRollCallIndex = -1;
+        renderAttWorkspace();
+      } else if (viewName === 'assessment') {
+        if (assessView) assessView.style.display = 'flex';
+        showAssessList();
+      } else if (viewName === 'behavior') {
+        if (behaviorView) behaviorView.style.display = 'flex';
+        renderBehaviorGrid();
+      }
+    }
+
+    function closeDetailView() {
+      const sidePanel = document.querySelector('.dashboard-side');
+      if (sidePanel) {
+        sidePanel.classList.remove('active-detail');
+      }
+      
+      document.querySelectorAll('.quick-action-card').forEach(card => {
+        card.style.borderColor = 'var(--border)';
+        card.style.background = 'var(--card-bg)';
+      });
+      
+      const defaultView = document.getElementById('dash-side-default');
+      const attView = document.getElementById('side-view-attendance');
+      const assessView = document.getElementById('side-view-assessment');
+      const behaviorView = document.getElementById('side-view-behavior');
+      
+      if (defaultView) defaultView.style.display = 'block';
+      if (attView) attView.style.display = 'none';
+      if (assessView) assessView.style.display = 'none';
+      if (behaviorView) behaviorView.style.display = 'none';
+    }
+
     // ── NAVIGATION ──
     function navTo(id) {
+      if (id !== 'screen-dashboard') {
+        closeDetailView();
+      }
       document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active');
         s.style.display = 'none';
@@ -3159,7 +3517,21 @@
         target.classList.add('active');
         target.querySelector('.scroll-area') && (target.querySelector('.scroll-area').scrollTop = 0);
       }
-      if (id === 'screen-attendance') { attRollCallIndex = -1; renderAttWorkspace(); }
+
+      // Update sidebar nav visibility and active state on desktop
+      const mainScreens = ['screen-dashboard', 'screen-discovery', 'screen-response', 'screen-recovery', 'screen-students', 'screen-profile', 'screen-care'];
+      const sideNav = document.querySelector('.sidebar-nav');
+      if (mainScreens.includes(id)) {
+        document.body.classList.add('sidebar-nav-visible');
+        if (sideNav) sideNav.style.display = 'flex';
+      } else {
+        document.body.classList.remove('sidebar-nav-visible');
+        if (sideNav) sideNav.style.display = 'none';
+      }
+      
+      document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.target === id);
+      });
 
       // Update active tab highlight across all bottom navs
       document.querySelectorAll('.nav-item[data-target]').forEach(item => {
@@ -3171,8 +3543,26 @@
       }
     }
 
-    // ── SPLASH → PIN ──
-    setTimeout(() => { navTo('screen-pin'); }, 2000);
+    // ── SPLASH → SCREEN SELECT ──
+    setTimeout(() => {
+      const storedTeacher = localStorage.getItem('educare_teacher_name');
+      const storedClass = localStorage.getItem('educare_current_class');
+      if (!storedTeacher || !storedClass) {
+        navTo('screen-setup');
+      } else {
+        // Update PIN screen dynamically
+        const pinAvatar = document.querySelector('.pin-avatar');
+        const pinName = document.querySelector('.pin-name');
+        const pinSub = document.querySelector('.pin-sub');
+        if (pinName) pinName.textContent = storedTeacher;
+        if (pinSub) pinSub.textContent = storedClass;
+        if (pinAvatar) {
+          const initials = storedTeacher.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+          pinAvatar.textContent = initials;
+        }
+        navTo('screen-pin');
+      }
+    }, 2000);
 
     // ── PIN ──
     function pinPress(d) {
@@ -3181,9 +3571,16 @@
       updatePinDots();
       if (pinVal.length === 4) {
         setTimeout(() => {
-          pinVal = '';
-          updatePinDots();
-          navTo('screen-dashboard');
+          const storedPin = localStorage.getItem('educare_pin') || '1234';
+          if (pinVal === storedPin) {
+            pinVal = '';
+            updatePinDots();
+            navTo('screen-dashboard');
+          } else {
+            pinVal = '';
+            updatePinDots();
+            showToast('Incorrect PIN');
+          }
         }, 400);
       }
     }
@@ -3195,6 +3592,143 @@
       for (let i = 1; i <= 4; i++) {
         document.getElementById('d' + i).classList.toggle('filled', i <= pinVal.length);
       }
+    }
+
+    // ── ADD STUDENT MODAL CONTROLS ──
+    function openAddStudentModal() {
+      const overlay = document.getElementById('add-student-overlay');
+      const modal = document.getElementById('add-student-modal');
+      if (overlay && modal) {
+        overlay.style.display = 'block';
+        modal.style.display = 'block';
+        setTimeout(() => { modal.style.transform = 'translateY(0)'; }, 10);
+      }
+    }
+
+    function closeAddStudentModal() {
+      const overlay = document.getElementById('add-student-overlay');
+      const modal = document.getElementById('add-student-modal');
+      if (overlay && modal) {
+        modal.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          modal.style.display = 'none';
+        }, 300);
+      }
+      const nameInput = document.getElementById('new-student-name');
+      if (nameInput) nameInput.value = '';
+    }
+
+    function handleAddStudent() {
+      const nameInput = document.getElementById('new-student-name');
+      if (!nameInput) return;
+      const name = nameInput.value.trim();
+      if (!name) {
+        showToast('Please enter a student name');
+        return;
+      }
+      
+      const currentClass = window.currentClass ? window.currentClass.name : (localStorage.getItem('educare_current_class') || '');
+      if (!currentClass) {
+        showToast('No class active');
+        return;
+      }
+
+      if (window.addStudent) {
+        window.addStudent(name, currentClass);
+      } else {
+        const state = window.getStore ? window.getStore() : { students: [], attState: {} };
+        if (!state.students) state.students = [];
+        state.students.push({ name, class: currentClass });
+        state.attState[name] = 'P';
+        if (window.saveStore) window.saveStore(state);
+      }
+
+      closeAddStudentModal();
+      showToast(`${name.split(' ')[0]} added successfully!`);
+      
+      // Force render of pages
+      if (window.renderDynamicScreens) {
+        window.renderDynamicScreens();
+      }
+      // Re-trigger layout updates
+      renderAttWorkspace();
+      renderBehaviorGrid();
+    }
+
+    // ── INITIAL ACCOUNT SETUP ──
+    function handleCreateClass() {
+      const teacherName = document.getElementById('setup-teacher-name').value.trim();
+      const pin = document.getElementById('setup-teacher-pin').value.trim();
+      const className = document.getElementById('setup-class-name').value.trim();
+      const studentsText = document.getElementById('setup-students').value.trim();
+
+      if (!teacherName) {
+        showToast('Please enter your name');
+        return;
+      }
+      if (pin.length !== 4) {
+        showToast('PIN must be exactly 4 digits');
+        return;
+      }
+      if (!className) {
+        showToast('Please enter class name');
+        return;
+      }
+
+      // Save credentials & initialize class
+      localStorage.setItem('educare_teacher_name', teacherName);
+      localStorage.setItem('educare_pin', pin);
+      localStorage.setItem('educare_current_class', className);
+      localStorage.setItem('educare_classes', JSON.stringify([{ name: className, isAdvisory: true }]));
+
+      // Initialize store
+      const state = window.getStore ? window.getStore() : { students: [], attState: {} };
+      state.teacherName = teacherName;
+      state.pin = pin;
+      state.currentClass = className;
+      state.classes = [{ name: className, isAdvisory: true }];
+      
+      // Parse bulk students
+      const studentNames = studentsText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      state.students = studentNames.map(s => ({ name: s, class: className }));
+      studentNames.forEach(s => {
+        state.attState[s] = 'P';
+      });
+
+      if (window.saveStore) {
+        window.saveStore(state);
+      }
+
+      // Update UI variables
+      window.currentClass = { name: className, isAdvisory: true };
+      
+      // Set name on dashboard
+      const dashGreetingName = document.querySelector('.greeting-name');
+      if (dashGreetingName) {
+        dashGreetingName.textContent = teacherName;
+      }
+
+      // Clear setup inputs
+      document.getElementById('setup-teacher-name').value = '';
+      document.getElementById('setup-teacher-pin').value = '';
+      document.getElementById('setup-class-name').value = '';
+      document.getElementById('setup-students').value = '';
+
+      showToast('Class initialized!');
+      
+      if (window.renderDynamicScreens) {
+        window.renderDynamicScreens();
+      }
+      
+      // Initialize other components
+      renderAttWorkspace();
+      showAssessList();
+      renderBehaviorGrid();
+
+      setTimeout(() => {
+        navTo('screen-dashboard');
+      }, 1000);
     }
 
     // ── ATTENDANCE ──
@@ -3801,13 +4335,6 @@
       document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
     }
 
-    // ── INIT ──
-    renderAttWorkspace();
-    showAssessList();
-    renderBehaviorGrid();
-
-    // (Inbox removed for V1 — focusing on Discovery, Response, Recovery)
-
     // Make all students in the roster clickable
     document.querySelectorAll('#screen-students .student-row').forEach(row => {
       row.style.cursor = 'pointer';
@@ -3815,54 +4342,83 @@
     });
 
     // ── CLASS SWITCHER LOGIC ──
-    let currentClass = { name: 'Grade 5 — Sampaguita', isAdvisory: true };
+    let currentClass = {
+      name: localStorage.getItem('educare_current_class') || 'No Class Selected',
+      isAdvisory: true
+    };
     window.currentClass = currentClass;
 
     function openClassSelect() {
-      const students = getStoreStudents();
+      const storedClasses = JSON.parse(localStorage.getItem('educare_classes') || '[]');
       const container = document.getElementById('class-options-container');
       if (container) {
-        if (students.length === 0) {
+        if (storedClasses.length === 0) {
           container.innerHTML = `
             <div style="text-align:center; padding: 20px 0; color: var(--mid-brown); font-size:14px; line-height:1.5;">
-              No classes available.<br>Please populate data first.
+              No classes available.<br>Please add a class below.
             </div>
           `;
         } else {
-          container.innerHTML = `
-            <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-              Advisory</div>
-            <div class="card class-option" style="margin-bottom:16px;border:1.5px solid ${currentClass.name === 'Grade 5 — Sampaguita' ? 'var(--amber)' : 'transparent'};cursor:pointer;"
-              onclick="selectClass('Grade 5 — Sampaguita', true, this)">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-                <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Sampaguita</div>
-                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 5 — Sampaguita' ? 'block' : 'none'};"></i>
-              </div>
-            </div>
+          let html = '';
+          const advisoryClasses = storedClasses.filter(c => c.isAdvisory);
+          const subjectClasses = storedClasses.filter(c => !c.isAdvisory);
 
-            <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
-              Subject Classes</div>
-            <div class="card class-option" style="margin-bottom:8px;cursor:pointer;border:1.5px solid ${currentClass.name === 'Grade 5 — Mabini' ? 'var(--amber)' : 'transparent'};"
-              onclick="selectClass('Grade 5 — Mabini', false, this)">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 5 — Mabini</div>
-                  <div style="font-size:12px;color:var(--mid-brown);">Science</div>
-                </div>
-                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 5 — Mabini' ? 'block' : 'none'};"></i>
-              </div>
-            </div>
-            <div class="card class-option" style="cursor:pointer;border:1.5px solid ${currentClass.name === 'Grade 6 — Rizal' ? 'var(--amber)' : 'transparent'};"
-              onclick="selectClass('Grade 6 — Rizal', false, this)">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">Grade 6 — Rizal</div>
-                  <div style="font-size:12px;color:var(--mid-brown);">Science</div>
-                </div>
-                <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${currentClass.name === 'Grade 6 — Rizal' ? 'block' : 'none'};"></i>
+          if (advisoryClasses.length > 0) {
+            html += `<div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Advisory</div>`;
+            advisoryClasses.forEach(c => {
+              const isSelected = currentClass.name === c.name;
+              html += `
+                <div class="card class-option" style="margin-bottom:12px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;"
+                  onclick="selectClass('${c.name}', true, this)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+                    <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${c.name}</div>
+                    <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${isSelected ? 'block' : 'none'};"></i>
+                  </div>
+                </div>`;
+            });
+          }
+
+          if (subjectClasses.length > 0) {
+            html += `<div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;margin-top:8px;">Subject Classes</div>`;
+            subjectClasses.forEach(c => {
+              const isSelected = currentClass.name === c.name;
+              html += `
+                <div class="card class-option" style="margin-bottom:8px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;"
+                  onclick="selectClass('${c.name}', false, this)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+                    <div>
+                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${c.name}</div>
+                      <div style="font-size:12px;color:var(--mid-brown);">Subject Class</div>
+                    </div>
+                    <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${isSelected ? 'block' : 'none'};"></i>
+                  </div>
+                </div>`;
+            });
+          }
+          container.innerHTML = html;
+        }
+
+        // Add inline add-class form at the bottom of the switcher modal if not already present
+        let addForm = document.getElementById('switcher-add-class-form');
+        if (!addForm) {
+          const formDiv = document.createElement('div');
+          formDiv.id = 'switcher-add-class-form';
+          formDiv.style.marginTop = '16px';
+          formDiv.style.borderTop = '1px solid var(--border-light)';
+          formDiv.style.paddingTop = '16px';
+          formDiv.innerHTML = `
+            <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Add New Class</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <input type="text" id="switcher-new-class-name" placeholder="e.g. Grade 5 — Mabini" class="form-input" style="padding:10px 12px; font-size:14px;">
+              <div style="display:flex; gap:10px; align-items:center;">
+                <label style="font-size:13px; color:var(--deep-brown); display:flex; align-items:center; gap:6px; cursor:pointer;">
+                  <input type="checkbox" id="switcher-is-advisory" style="cursor:pointer;"> Advisory Class
+                </label>
+                <button class="btn-primary btn-sm" onclick="handleSwitcherAddClass()" style="margin-left:auto; padding:6px 12px; font-size:12px; width:auto; height:auto;">Add Class</button>
               </div>
             </div>
           `;
+          container.parentElement.appendChild(formDiv);
         }
       }
 
@@ -3871,6 +4427,39 @@
       overlay.style.display = 'block';
       modal.style.display = 'block';
       setTimeout(() => { modal.style.transform = 'translateY(0)'; }, 10);
+    }
+
+    function handleSwitcherAddClass() {
+      const nameInput = document.getElementById('switcher-new-class-name');
+      const isAdvisoryInput = document.getElementById('switcher-is-advisory');
+      if (!nameInput) return;
+      const name = nameInput.value.trim();
+      if (!name) {
+        showToast('Please enter a class name');
+        return;
+      }
+      const isAdvisory = isAdvisoryInput ? isAdvisoryInput.checked : false;
+
+      // Add to store
+      if (window.addClass) {
+        window.addClass(name, isAdvisory);
+      } else {
+        const storedClasses = JSON.parse(localStorage.getItem('educare_classes') || '[]');
+        const exists = storedClasses.some(c => c.name === name);
+        if (!exists) {
+          storedClasses.push({ name, isAdvisory });
+          localStorage.setItem('educare_classes', JSON.stringify(storedClasses));
+        }
+      }
+
+      // Reset input values
+      nameInput.value = '';
+      if (isAdvisoryInput) isAdvisoryInput.checked = false;
+
+      showToast('Class added!');
+      
+      // Refresh dynamic listings inside modal
+      openClassSelect();
     }
 
     function closeClassSelect() {
@@ -3886,22 +4475,34 @@
     function selectClass(name, isAdvisory, element) {
       currentClass = { name, isAdvisory };
       window.currentClass = currentClass;
+      localStorage.setItem('educare_current_class', name);
+      
+      const state = window.getStore ? window.getStore() : {};
+      state.currentClass = name;
+      if (window.saveStore) window.saveStore(state);
 
       // Update UI checkmarks
-      document.querySelectorAll('.class-option').forEach(el => {
-        el.style.borderColor = 'transparent';
-        el.querySelector('.class-check').style.display = 'none';
-      });
-      element.style.borderColor = 'var(--amber)';
-      element.querySelector('.class-check').style.display = 'block';
+      if (element) {
+        document.querySelectorAll('.class-option').forEach(el => {
+          el.style.borderColor = 'transparent';
+          const check = el.querySelector('.class-check');
+          if (check) check.style.display = 'none';
+        });
+        element.style.borderColor = 'var(--amber)';
+        const check = element.querySelector('.class-check');
+        if (check) check.style.display = 'block';
+      }
 
       // Update dashboard display
-      document.getElementById('dash-class-name').textContent = name;
+      const dashNameEl = document.getElementById('dash-class-name');
+      if (dashNameEl) dashNameEl.textContent = name;
       const typeEl = document.getElementById('dash-class-type');
-      if (isAdvisory) {
-        typeEl.innerHTML = '<i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class';
-      } else {
-        typeEl.innerHTML = '<i class="ti ti-book" style="color:var(--info);"></i> Subject Class';
+      if (typeEl) {
+        if (isAdvisory) {
+          typeEl.innerHTML = '<i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class';
+        } else {
+          typeEl.innerHTML = '<i class="ti ti-book" style="color:var(--info);"></i> Subject Class';
+        }
       }
 
       // Update top bars across app
@@ -3919,14 +4520,18 @@
         if (isAdvisory) {
           careActionTitle.textContent = 'Contact parent/guardian';
           careActionSub.textContent = 'Reach out to Maria\'s guardian — 2 prior attempts unanswered';
-          document.getElementById('ac2').onclick = () => selectAction('ac2');
+          const ac2Btn = document.getElementById('ac2');
+          if (ac2Btn) ac2Btn.onclick = () => selectAction('ac2');
         } else {
           careActionTitle.textContent = 'Message Class Adviser';
           careActionSub.textContent = 'Send EWS summary to the class adviser';
-          document.getElementById('ac2').onclick = () => {
-            selectAction('ac2');
-            setTimeout(() => { showToast('Messaging coming in a future version'); }, 500);
-          };
+          const ac2Btn = document.getElementById('ac2');
+          if (ac2Btn) {
+            ac2Btn.onclick = () => {
+              selectAction('ac2');
+              setTimeout(() => { showToast('Messaging coming in a future version'); }, 500);
+            };
+          }
         }
       }
 
@@ -3936,6 +4541,33 @@
         window.renderDynamicScreens();
       }
     }
+
+    // ── INIT ──
+    const storedTeacher = localStorage.getItem('educare_teacher_name');
+    const storedClass = localStorage.getItem('educare_current_class');
+    if (storedTeacher) {
+      const el = document.querySelector('.greeting-name');
+      if (el) el.textContent = storedTeacher;
+    }
+    if (storedClass) {
+      const el = document.getElementById('dash-class-name');
+      if (el) el.textContent = storedClass;
+      
+      const rosterClassSub = document.getElementById('roster-class-name');
+      if (rosterClassSub) {
+        const students = getStoreStudents();
+        rosterClassSub.textContent = `${storedClass} · ${students.length} students`;
+      }
+
+      const topBarSubs = document.querySelectorAll('.top-bar-sub');
+      topBarSubs.forEach(el => {
+        el.textContent = storedClass;
+      });
+    }
+
+    renderAttWorkspace();
+    showAssessList();
+    renderBehaviorGrid();
 
   </script>
 </body>

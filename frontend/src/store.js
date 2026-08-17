@@ -5,6 +5,10 @@ const STORE_KEY = 'educare_local_state';
 const defaultState = {
   teacherId: localStorage.getItem('educare_teacher_id') || '',
   teacherName: localStorage.getItem('educare_teacher_name') || '',
+  authToken: localStorage.getItem('educare_auth_token') || '',
+  pin: localStorage.getItem('educare_pin') || '',
+  classes: JSON.parse(localStorage.getItem('educare_classes') || '[]'),
+  currentClass: localStorage.getItem('educare_current_class') || '',
   lastSyncId: parseInt(localStorage.getItem('educare_last_sync_id') || '0', 10),
   students: [],
   attState: {},
@@ -32,6 +36,10 @@ export const saveStore = (state) => {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
   if (state.teacherId) localStorage.setItem('educare_teacher_id', state.teacherId);
   if (state.teacherName) localStorage.setItem('educare_teacher_name', state.teacherName);
+  if (state.authToken) localStorage.setItem('educare_auth_token', state.authToken);
+  if (state.pin !== undefined) localStorage.setItem('educare_pin', state.pin);
+  if (state.currentClass !== undefined) localStorage.setItem('educare_current_class', state.currentClass);
+  if (state.classes) localStorage.setItem('educare_classes', JSON.stringify(state.classes));
   localStorage.setItem('educare_last_sync_id', state.lastSyncId.toString());
 };
 
@@ -57,14 +65,36 @@ export const getSubmissions = () => {
 };
 
 export const getStudents = () => {
-  return getStore().students;
+  const state = getStore();
+  const activeClass = state.currentClass || '';
+  return (state.students || [])
+    .filter(s => typeof s === 'object' ? s.class === activeClass : true)
+    .map(s => typeof s === 'object' ? s.name : s);
 };
 
-export const addStudent = (name) => {
+export const addStudent = (name, className) => {
   const state = getStore();
-  if (!state.students.includes(name)) {
-    state.students.push(name);
+  const cls = className || state.currentClass;
+  if (!state.students) state.students = [];
+  const exists = state.students.some(s => 
+    typeof s === 'object' ? (s.name === name && s.class === cls) : s === name
+  );
+  if (!exists) {
+    state.students.push({ name, class: cls });
     state.attState[name] = 'P'; // Default attendance
+    saveStore(state);
+  }
+};
+
+export const addClass = (className, isAdvisory = false) => {
+  const state = getStore();
+  if (!state.classes) state.classes = [];
+  const exists = state.classes.some(c => c.name === className);
+  if (!exists) {
+    state.classes.push({ name: className, isAdvisory });
+    if (!state.currentClass) {
+      state.currentClass = className;
+    }
     saveStore(state);
   }
 };

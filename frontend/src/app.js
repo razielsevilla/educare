@@ -1,11 +1,12 @@
-import { getStore, saveStore, addStudent, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows } from './store.js';
+import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows } from './store.js';
 import { registerTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 
 // Expose store globally so inline scripts in index.html still work without breaking
 window.getStore = getStore;
 window.saveStore = saveStore;
 window.pushSync = () => { pushSync(); if(window.renderDynamicScreens) window.renderDynamicScreens(); };
-window.addStudent = (name) => { addStudent(name); window.pushSync(); };
+window.addStudent = (name, className) => { addStudent(name, className); window.pushSync(); };
+window.addClass = (className, isAdvisory) => { addClass(className, isAdvisory); window.pushSync(); };
 window.fillMockData = () => { fillMockData(); window.pushSync(); location.reload(); };
 window.clearLocalState = () => { localStorage.clear(); location.reload(); };
 window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
@@ -85,7 +86,40 @@ window.getStoreAssessments = getAssessments;
 window.getStoreSubmissions = getSubmissions;
 window.getStoreAttState = getAttState;
 
+window.currentRosterFilter = 'All';
+window.currentRosterSearch = '';
+
+window.setRosterFilter = function(filterVal, btnEl) {
+  window.currentRosterFilter = filterVal;
+  
+  if (btnEl && btnEl.parentElement) {
+    const buttons = btnEl.parentElement.querySelectorAll('button');
+    buttons.forEach(btn => {
+      if (btn === btnEl) {
+        btn.className = 'btn-sm';
+        btn.style.padding = '6px 14px';
+      } else {
+        btn.className = 'btn-sm-ghost';
+        btn.style.padding = '5px 12px';
+      }
+    });
+  }
+  
+  window.renderDynamicScreens();
+};
+
+window.handleRosterSearch = function(searchVal) {
+  window.currentRosterSearch = searchVal;
+  window.renderDynamicScreens();
+};
+
 window.renderDynamicScreens = () => {
+  const store = getStore();
+  const teacherNameEl = document.querySelector('.greeting-name');
+  if (teacherNameEl && store.teacherName) {
+    teacherNameEl.textContent = store.teacherName;
+  }
+
   const students = getStudents();
   const workflows = getWorkflows();
   const recoveryStudentsList = workflows.filter(w => w.stage === 'recovery').map(w => w.student);
@@ -95,17 +129,42 @@ window.renderDynamicScreens = () => {
   let monitoring = [];
   let clear = [];
 
+  const searchQuery = (window.currentRosterSearch || '').trim().toLowerCase();
+
   students.forEach(s => {
+    // 1. Search Query filter (match name)
+    if (searchQuery && !s.toLowerCase().includes(searchQuery)) {
+      return;
+    }
+
     const { tier, reasons } = window.computeRisk(s);
+    
+    // Determine actual tier
+    let actualTier = 'Clear';
+    if (recoveryStudentsList.includes(s)) {
+      actualTier = 'Monitoring';
+    } else {
+      if (tier === 'critical') actualTier = 'Critical';
+      else if (tier === 'flagged' || tier === 'monitoring') actualTier = 'Flagged';
+      else actualTier = 'Clear';
+    }
+
+    // 2. Active Tab filter
+    const activeFilter = window.currentRosterFilter || 'All';
+    if (activeFilter !== 'All' && actualTier !== activeFilter) {
+      return;
+    }
+
     const obj = { name: s, initials: s.split(' ').map(x=>x[0]).join('').substring(0,2), reasons };
     
-    if (recoveryStudentsList.includes(s)) {
+    if (actualTier === 'Monitoring') {
       monitoring.push(obj);
+    } else if (actualTier === 'Critical') {
+      critical.push(obj);
+    } else if (actualTier === 'Flagged') {
+      flagged.push(obj);
     } else {
-      if (tier === 'critical') critical.push(obj);
-      else if (tier === 'flagged') flagged.push(obj);
-      else if (tier === 'monitoring') flagged.push(obj); // Place in Discovery/Flagged first
-      else clear.push(obj);
+      clear.push(obj);
     }
   });
 
@@ -123,6 +182,99 @@ window.renderDynamicScreens = () => {
         classTypeEl.innerHTML = '<i class="ti ti-star" style="color:var(--amber);"></i> Advisory Class';
       } else {
         classTypeEl.innerHTML = '<i class="ti ti-book" style="color:var(--info);"></i> Subject Class';
+      }
+    }
+  }
+
+  // Update Class Summary stats card
+  const statsCardEl = document.getElementById('dash-class-stats-card');
+  const statAttendanceEl = document.getElementById('stat-attendance');
+  const statHomeworkEl = document.getElementById('stat-homework');
+  const statGradesEl = document.getElementById('stat-grades');
+  
+  if (statsCardEl) {
+    if (students.length === 0) {
+      statsCardEl.style.display = 'none';
+    } else {
+      statsCardEl.style.display = 'block';
+      
+      // 1. Attendance Rate
+      const attState = getAttState();
+      let present = 0;
+      let totalAtt = 0;
+      students.forEach(s => {
+        if (attState[s]) {
+          totalAtt++;
+          if (attState[s] === 'P') present++;
+        }
+      });
+      const attRate = totalAtt > 0 ? Math.round((present / totalAtt) * 100) : null;
+      if (statAttendanceEl) {
+        statAttendanceEl.textContent = attRate !== null ? `${attRate}%` : 'Not marked';
+      }
+      
+      // 2. Homework Compliance
+      let totalHwAssigned = 0;
+      let totalHwSubmitted = 0;
+      const assessments = getAssessments();
+      const submissions = getSubmissions();
+      assessments.forEach(a => {
+        if (a.type === 'take-home') {
+          students.forEach(s => {
+            totalHwAssigned++;
+            if (submissions[a.id]?.[s]?.submitted) {
+              totalHwSubmitted++;
+            }
+          });
+        }
+      });
+      const hwCompliance = totalHwAssigned > 0 ? Math.round((totalHwSubmitted / totalHwAssigned) * 100) : null;
+      if (statHomeworkEl) {
+        statHomeworkEl.textContent = hwCompliance !== null ? `${hwCompliance}%` : 'No tasks';
+      }
+      
+      // 3. Average Grade
+      let classGradeSum = 0;
+      let classGradeCount = 0;
+      assessments.forEach(a => {
+        if (a.type === 'in-class') {
+          students.forEach(s => {
+            const sub = submissions[a.id]?.[s];
+            if (sub && sub.score !== null && sub.score !== '') {
+              classGradeSum += (sub.score / a.maxScore) * 100;
+              classGradeCount++;
+            }
+          });
+        }
+      });
+      const avgGrade = classGradeCount > 0 ? Math.round(classGradeSum / classGradeCount) : null;
+      if (statGradesEl) {
+        statGradesEl.textContent = avgGrade !== null ? `${avgGrade}%` : 'No grades';
+      }
+    }
+  }
+
+  // ── UPDATE GREETING NOTIFICATION BANNER ──
+  const greetingBannerEl = document.getElementById('greeting-notification-banner');
+  const greetingTextEl = document.getElementById('greeting-notification-text');
+  if (greetingBannerEl && greetingTextEl) {
+    if (students.length === 0) {
+      greetingBannerEl.style.display = 'block';
+      greetingTextEl.innerHTML = 'Welcome to EduCare! Tap <strong>Populate</strong> or click the Class Switcher to select a class and load student records.';
+    } else {
+      greetingBannerEl.style.display = 'block';
+      
+      // Check attendance
+      const attState = getAttState();
+      const hasMarkedAttendance = Object.keys(attState).length > 0;
+      const flaggedCount = critical.length + flagged.length;
+      
+      if (!hasMarkedAttendance) {
+        greetingTextEl.innerHTML = '<strong>Action required today</strong>: You have not marked attendance yet today. Please take attendance for your class.';
+      } else if (flaggedCount > 0) {
+        greetingTextEl.innerHTML = `<strong>Class Update</strong>: Attendance is complete. There are currently <strong>${flaggedCount}</strong> students flagged with warnings who require active support.`;
+      } else {
+        greetingTextEl.innerHTML = '<strong>All clear</strong>: Attendance is complete, and all student signals are normal. Have a great teaching day!';
       }
     }
   }
@@ -185,7 +337,10 @@ window.renderDynamicScreens = () => {
     html += renderSection('Flagged', flagged, 'badge-flagged');
     html += renderSection('Monitoring', monitoring, 'badge-monitoring');
     html += renderSection('Clear', clear, 'badge-clear');
-    if(students.length === 0) {
+    const totalRendered = critical.length + flagged.length + monitoring.length + clear.length;
+    if (students.length > 0 && totalRendered === 0) {
+        html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No students match the search/filter criteria.</div>';
+    } else if (students.length === 0) {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No students. Click Fill Mock Data to start.</div>';
     }
     rosterContainer.innerHTML = html;
