@@ -30,6 +30,29 @@ export const computeRisk = (student) => {
     return (end - start) <= 7 * 24 * 60 * 60 * 1000;
   };
 
+  const historyScores = assessments
+    .map((assessment) => {
+      const sub = submissions[assessment.id]?.[student];
+      if (!sub || sub.score === null || sub.score === '' || sub.score === undefined) return null;
+      if (assessment.type !== 'in-class') return null;
+      return (Number(sub.score) / Number(assessment.maxScore || 1)) * 100;
+    })
+    .filter((score) => score !== null && Number.isFinite(score));
+
+  const computeStdDev = (values) => {
+    if (values.length === 0) return 0;
+    const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const variance = values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / values.length;
+    return Math.sqrt(variance);
+  };
+
+  const latestScore = historyScores.length > 0 ? historyScores[historyScores.length - 1] : null;
+  const baselineMean = historyScores.length > 0 ? historyScores.reduce((sum, score) => sum + score, 0) / historyScores.length : null;
+  const baselineStdDev = historyScores.length > 0 ? computeStdDev(historyScores) : 0;
+  const baselineWarning = historyScores.length >= 4 && latestScore !== null && baselineMean !== null && baselineStdDev > 0
+    ? latestScore < baselineMean - (1.5 * baselineStdDev)
+    : false;
+
   // 1. Attendance Risk
   // Use the FE-1 attendance log to compute a rolling 14-day absence pattern.
   let scoreSum = 0;
@@ -63,6 +86,11 @@ export const computeRisk = (student) => {
     reasons.push(`${absencesInWindow.length} absences in the last 14 days`);
     reasons.push(clustered ? 'Clustered absence pattern' : 'Scattered absence pattern');
     tier = 'critical';
+  }
+
+  if (baselineWarning && latestScore !== null && baselineMean !== null) {
+    reasons.push(`Baseline drop: ${Math.round(latestScore)}% vs. ${Math.round(baselineMean)}% personal baseline`);
+    tier = tier === 'clear' ? 'flagged' : tier;
   }
 
   if (currentAtt === 'A') {

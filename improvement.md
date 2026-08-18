@@ -111,10 +111,10 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [app.js:62-68](frontend/src/app.js#L62) — flat `<75`/`<85` thresholds regardless of the student's own history.
 **Problem:** The docs describe detecting an A-student suddenly scoring C's (baseline anomaly); the code only checks an absolute cutoff, so a consistently high performer and a consistently low performer are judged by the same bar, and a sudden real drop for a strong student isn't specially flagged.
 **Acceptance Criteria:**
-- [ ] Each student's average and standard deviation are computed from their own historical assessment scores.
-- [ ] A flag fires when a recent score deviates beyond a documented number of standard deviations from that student's own baseline, independent of the absolute score.
-- [ ] The flat absolute thresholds are kept only as a fallback for students with insufficient history to establish a baseline (documented minimum sample size).
-- [ ] Unit tests cover: a high-baseline student dropping to a "passing" score that's still anomalous for them gets flagged; a chronically low-scoring student who is stable does not get flagged for the same absolute score.
+- [x] Each student's average and standard deviation are computed from their own historical assessment scores.
+- [x] A flag fires when a recent score deviates beyond a documented number of standard deviations from that student's own baseline, independent of the absolute score.
+- [x] The flat absolute thresholds are kept only as a fallback for students with insufficient history to establish a baseline (documented minimum sample size).
+- [x] Unit tests cover: a high-baseline student dropping to a "passing" score that's still anomalous for them gets flagged; a chronically low-scoring student who is stable does not get flagged for the same absolute score.
 
 ### FE-4 — Persist behavioral/participation tags and feed them into risk computation
 **Priority:** P1
