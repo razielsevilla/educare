@@ -158,6 +158,155 @@ export const computeRisk = (student) => {
 
 window.computeRisk = computeRisk;
 
+// Data-driven profile content generator (FE-6)
+const DEMO_STUDENTS = ['Maria Santos', 'Dante Pascual', 'Carla Garcia'];
+
+export const generateStudentProfileData = (studentName) => {
+  // Check if this is a hardcoded demo student
+  const isDemoStudent = DEMO_STUDENTS.includes(studentName);
+
+  // Compute actual risk data
+  const { tier, reasons } = computeRisk(studentName);
+  const attState = getAttState();
+  const assessments = getAssessments();
+  const submissions = getSubmissions();
+  const behaviorLogs = getBehaviorLogs(studentName);
+  const careInteractions = getCareInteractionsForStudent(studentName);
+  const attendanceWindow = getAttendanceWindow(studentName, 14);
+
+  // Compute stats for display
+  let scoreSum = 0, scoreCount = 0, hwTotal = 0, hwSubmitted = 0;
+  assessments.forEach(a => {
+    const sub = submissions[a.id]?.[studentName];
+    if (sub) {
+      if (a.type === 'in-class' && sub.score !== null && sub.score !== '') {
+        scoreSum += (sub.score / a.maxScore) * 100;
+        scoreCount++;
+      }
+      if (a.type === 'take-home') {
+        hwTotal++;
+        if (sub.submitted) hwSubmitted++;
+      }
+    }
+  });
+
+  const avgScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0;
+  const hwRate = hwTotal > 0 ? Math.round((hwSubmitted / hwTotal) * 100) : 0;
+  const absencesInWindow = attendanceWindow.filter((entry) => entry.status === 'A').length;
+  const currentAtt = attState[studentName] || 'P';
+
+  // Map tier to color and status
+  const tierMap = {
+    critical: { color: 'critical', statusText: `Critical — ${reasons[0] || 'Concerns detected'}` },
+    flagged: { color: 'flagged', statusText: `Flagged — ${reasons[0] || 'Needs attention'}` },
+    monitoring: { color: 'monitoring', statusText: `Monitoring — ${reasons[0] || 'Under review'}` },
+    clear: { color: 'clear', statusText: 'Clear — On track' }
+  };
+
+  const tierInfo = tierMap[tier] || tierMap.clear;
+  const initials = studentName.split(' ').map(x => x[0]).join('').slice(0, 2);
+
+  // Generate insight cards from reasons
+  const generateInsightCards = () => {
+    const iconMap = {
+      'absences': 'ti-calendar-x',
+      'attendance': 'ti-calendar-x',
+      'academic': 'ti-trending-down',
+      'baseline': 'ti-trending-down',
+      'homework': 'ti-file-off',
+      'behavior': 'ti-mood-sad',
+      'incident': 'ti-mood-sad'
+    };
+
+    const getIconForReason = (reason) => {
+      const lower = reason.toLowerCase();
+      if (lower.includes('absence')) return 'ti-calendar-x';
+      if (lower.includes('baseline') || lower.includes('score')) return 'ti-trending-down';
+      if (lower.includes('homework')) return 'ti-file-off';
+      if (lower.includes('behavior') || lower.includes('incident')) return 'ti-mood-sad';
+      return 'ti-alert-circle';
+    };
+
+    return reasons.map((reason, i) => {
+      const icon = getIconForReason(reason);
+      const tierColor = i === 0 ? tier : 'monitoring';
+      const tierBg = tierColor === 'critical' ? 'var(--critical-bg)' : tierColor === 'flagged' ? 'var(--flagged-bg)' : 'var(--monitoring-bg)';
+      const tierTextColor = tierColor === 'critical' ? 'var(--critical)' : tierColor === 'flagged' ? 'var(--flagged)' : 'var(--amber)';
+      return `
+        <div class="insight-card ${tierColor}" style="margin-bottom:8px;">
+          <div class="insight-icon"><i class="ti ${icon}"></i></div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${tierTextColor};">${reason}</div>
+            <div style="font-size:12px;color:var(--mid-brown);margin-top:3px;line-height:1.5;">Computed from recent activity and patterns</div>
+          </div>
+        </div>`;
+    }).join('');
+  };
+
+  // Generate triage summary
+  const generateTriageSummary = () => {
+    const tierBg = tier === 'critical' ? 'var(--critical-bg)' : tier === 'flagged' ? 'var(--flagged-bg)' : 'var(--monitoring-bg)';
+    const tierBorder = tier === 'critical' ? '#F7C1C1' : tier === 'flagged' ? '#FCCB9A' : '#FFE4A0';
+    const tierColor = tier === 'critical' ? 'var(--critical)' : tier === 'flagged' ? 'var(--flagged)' : 'var(--amber)';
+    const firstReason = reasons[0] || 'Review data';
+
+    return `
+      <div style="background:${tierBg};border:1px solid ${tierBorder};border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:${tierColor};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Overall — ${tier.charAt(0).toUpperCase() + tier.slice(1)}</div>
+        <div style="font-size:14px;color:var(--deep-brown);line-height:1.6;">${studentName} has data indicating: ${firstReason}. Review full signals above for detailed context.</div>
+      </div>`;
+  };
+
+  // Generate prompts from actual data
+  const generatePrompts = () => {
+    const prompts = [];
+    if (reasons.some(r => r.toLowerCase().includes('absence'))) {
+      prompts.push(`"I noticed you've been absent recently. Is everything okay at home?"`);
+    }
+    if (reasons.some(r => r.toLowerCase().includes('score') || r.toLowerCase().includes('academic'))) {
+      prompts.push(`"Your recent work looks different. Is there a topic you'd like help with?"`);
+    }
+    if (reasons.some(r => r.toLowerCase().includes('homework'))) {
+      prompts.push(`"I see homework has been challenging. What can I do to support you?"`);
+    }
+    if (reasons.some(r => r.toLowerCase().includes('behavior') || r.toLowerCase().includes('incident'))) {
+      prompts.push(`"I want to check in about what happened recently. How are you feeling?"`);
+    }
+
+    const promptHtml = prompts.length > 0
+      ? prompts.map(p => `<div class="prompt-chip">${p}</div>`).join('')
+      : `<div class="prompt-chip">"How are things going for you this week?"</div>`;
+
+    return `
+      <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Generated from data</div>
+      ${promptHtml}
+      <div style="font-size:11px;color:var(--mid-brown);margin-top:12px;font-style:italic;">💡 Tip: Personalize these prompts based on what you know about ${studentName}.</div>`;
+  };
+
+  return {
+    studentName,
+    tier,
+    reasons,
+    color: tierInfo.color,
+    statusText: tierInfo.statusText,
+    initials,
+    meta: `Data-driven profile · ${absencesInWindow} absences in 14d`,
+    stats: [
+      { num: absencesInWindow, color: 'var(--critical)', lbl: 'Absences (14d)' },
+      { num: avgScore, color: avgScore < 75 ? 'var(--critical)' : avgScore < 85 ? 'var(--flagged)' : 'var(--clear)', lbl: 'Avg Score' },
+      { num: `${hwRate}%`, color: hwRate < 60 ? 'var(--flagged)' : 'var(--clear)', lbl: 'HW Rate' }
+    ],
+    insightsHtml: generateInsightCards(),
+    triageHtml: generateTriageSummary(),
+    promptsHtml: generatePrompts(),
+    behaviorLogs,
+    careInteractions,
+    demoMode: isDemoStudent
+  };
+};
+
+window.generateStudentProfileData = generateStudentProfileData;
+
 // Expose accessors
 window.getStoreStudents = getStudents;
 window.getStoreAssessments = getAssessments;

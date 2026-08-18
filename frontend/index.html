@@ -3373,7 +3373,16 @@
     };
 
     function openProfile(studentName) {
-      const data = personaData[studentName] || personaData['Maria Santos'];
+      // Use data-driven profile generation (FE-6) instead of hardcoded personas
+      let data = window.generateStudentProfileData(studentName);
+      
+      // For demo students, optionally preserve hardcoded rich content
+      // (current implementation in generateStudentProfileData already includes demo content for Maria/Dante/Carla)
+      if (data.demoMode && personaData[studentName]) {
+        // Blend: use generated structure but preserve hardcoded rich content fields if present
+        const hardcoded = personaData[studentName];
+        data = { ...data, ...hardcoded, demoMode: true, studentName }; // merge but keep studentName
+      }
 
       // Update Profile Screen
       const profileHero = document.querySelector('#screen-profile .profile-hero');
