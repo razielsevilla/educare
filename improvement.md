@@ -35,11 +35,11 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [server.js:12](backend/server.js#L12) (`app.use(cors())` with no options — allows any origin)
 **Problem:** Any website can call this API cross-origin, and there is no throttling on registration or sync endpoints, making spam/abuse (fake teacher accounts, blob-push flooding) trivial.
 **Acceptance Criteria:**
-- [ ] `cors()` is configured with an explicit allow-list (dev origins + the real app origin(s)), not the open-all-origins default.
-- [ ] `/api/teacher/register` is rate-limited per IP (e.g. via `express-rate-limit`) with a documented threshold, and exceeding it returns `429`.
-- [ ] `/api/sync/push` and `/api/sync/pull` are similarly rate-limited per teacherId/IP.
-- [ ] Basic security headers are set (e.g. via `helmet`).
-- [ ] A test confirms requests beyond the configured limit are rejected.
+- [x] `cors()` is configured with an explicit allow-list (dev origins + the real app origin(s)), not the open-all-origins default.
+- [x] `/api/teacher/register` is rate-limited per IP (e.g. via `express-rate-limit`) with a documented threshold, and exceeding it returns `429`.
+- [x] `/api/sync/push` and `/api/sync/pull` are similarly rate-limited per teacherId/IP.
+- [x] Basic security headers are set (e.g. via `helmet`).
+- [x] A test confirms requests beyond the configured limit are rejected.
 
 ### BE-4 — Stop committing the SQLite database binary to git
 **Priority:** P1

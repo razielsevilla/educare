@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -13,8 +15,48 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'educare-dev-secret-change-me';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ENCRYPTED_BLOB_PREFIX = 'enc:v1:';
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,capacitor://localhost,http://localhost:3000,http://127.0.0.1:3000').split(',').map((origin) => origin.trim()).filter(Boolean);
 
-app.use(cors());
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Origin not allowed by CORS policy'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+const getRateLimitKey = (req) => {
+  const forwardedHeader = req.headers['x-forwarded-for'];
+  const sourceIp = Array.isArray(forwardedHeader) ? forwardedHeader[0] : forwardedHeader || req.ip || 'unknown';
+  return rateLimit.ipKeyGenerator(String(sourceIp));
+};
+
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  keyGenerator: getRateLimitKey,
+});
+
+const syncLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  keyGenerator: getRateLimitKey,
+});
+
+app.use(helmet());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const isValidTeacherId = (teacherId) => typeof teacherId === 'string' && UUID_PATTERN.test(teacherId);
@@ -62,7 +104,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'EduCare Backend is running' });
 });
 
-app.post('/api/sync/push', (req, res) => {
+app.post('/api/sync/push', syncLimiter, (req, res) => {
   const { teacherId, blobData } = req.body;
 
   if (!teacherId || !isValidTeacherId(teacherId)) {
@@ -92,7 +134,7 @@ app.post('/api/sync/push', (req, res) => {
   });
 });
 
-app.get('/api/sync/pull', (req, res) => {
+app.get('/api/sync/pull', syncLimiter, (req, res) => {
   const teacherId = req.query.teacherId;
   const since = Number(req.query.since ?? 0);
 
@@ -123,7 +165,7 @@ app.get('/api/sync/pull', (req, res) => {
   });
 });
 
-app.post('/api/teacher/register', async (req, res) => {
+app.post('/api/teacher/register', registerLimiter, async (req, res) => {
   const { name, password } = req.body;
   const cleanName = typeof name === 'string' ? name.trim() : '';
 
