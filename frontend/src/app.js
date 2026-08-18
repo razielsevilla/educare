@@ -1,7 +1,13 @@
-import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword, setupSecurityPin, verifySecurityPin, getPinLockStatus, hasSecurityPinConfigured, hasSessionPin, clearSessionPin } from './store.js';
+import './ui.js';
+import { getStore, saveStore, addStudent, addClass, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword, setupSecurityPin, verifySecurityPin, getPinLockStatus, hasSecurityPinConfigured, hasSessionPin, clearSessionPin, resetForgottenPin } from './store.js';
 import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
+import { escapeHtml } from './ui.js';
 
 let backgroundSyncStarted = false;
+let currentRosterFilter = 'All';
+let currentRosterSearch = '';
+
+window.escapeHtml = escapeHtml;
 
 const ensureBackgroundSyncStarted = () => {
   if (backgroundSyncStarted) return;
@@ -36,10 +42,7 @@ window.saveStore = saveStore;
 window.pushSync = () => { pushSync(); if(window.renderDynamicScreens) window.renderDynamicScreens(); };
 window.addStudent = (name, className) => { addStudent(name, className); window.pushSync(); };
 window.addClass = (className, isAdvisory) => { addClass(className, isAdvisory); window.pushSync(); };
-window.fillMockData = () => { fillMockData(); window.pushSync(); location.reload(); };
-window.clearLocalState = () => { localStorage.clear(); location.reload(); };
 window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
-window.getWorkflows = getWorkflows;
 window.addBehaviorLog = (student, tag, timestamp) => {
   const log = addBehaviorLog(student, tag, timestamp);
   if (log) {
@@ -54,11 +57,9 @@ window.addCareInteraction = (student, actionTaken, outcomeSelected, notes, times
   }
   return interaction;
 };
-window.getCareInteractionsForStudent = getCareInteractionsForStudent;
-window.getCareInteractionsDue = getCareInteractionsDue;
 window.hasSecurityPinConfigured = hasSecurityPinConfigured;
 window.getPinLockStatus = getPinLockStatus;
-window.clearPinSession = clearSessionPin;
+window.resetForgottenPin = resetForgottenPin;
 window.syncAfterUnlock = syncAfterUnlock;
 window.setupSecurityPin = (pin) => {
   setupSecurityPin(pin);
@@ -275,7 +276,6 @@ export const computeRisk = (student) => {
   return { tier, reasons };
 };
 
-window.computeRisk = computeRisk;
 
 // Data-driven profile content generator (FE-6)
 const DEMO_STUDENTS = ['Maria Santos', 'Dante Pascual', 'Carla Garcia'];
@@ -355,7 +355,7 @@ export const generateStudentProfileData = (studentName) => {
         <div class="insight-card ${tierColor}" style="margin-bottom:8px;">
           <div class="insight-icon"><i class="ti ${icon}"></i></div>
           <div>
-            <div style="font-size:13px;font-weight:700;color:${tierTextColor};">${reason}</div>
+            <div style="font-size:13px;font-weight:700;color:${tierTextColor};">${escapeHtml(reason)}</div>
             <div style="font-size:12px;color:var(--mid-brown);margin-top:3px;line-height:1.5;">Computed from recent activity and patterns</div>
           </div>
         </div>`;
@@ -372,7 +372,7 @@ export const generateStudentProfileData = (studentName) => {
     return `
       <div style="background:${tierBg};border:1px solid ${tierBorder};border-radius:12px;padding:14px 16px;margin-bottom:12px;">
         <div style="font-size:12px;font-weight:700;color:${tierColor};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Overall — ${tier.charAt(0).toUpperCase() + tier.slice(1)}</div>
-        <div style="font-size:14px;color:var(--deep-brown);line-height:1.6;">${studentName} has data indicating: ${firstReason}. Review full signals above for detailed context.</div>
+        <div style="font-size:14px;color:var(--deep-brown);line-height:1.6;">${escapeHtml(studentName)} has data indicating: ${escapeHtml(firstReason)}. Review full signals above for detailed context.</div>
       </div>`;
   };
 
@@ -393,13 +393,13 @@ export const generateStudentProfileData = (studentName) => {
     }
 
     const promptHtml = prompts.length > 0
-      ? prompts.map(p => `<div class="prompt-chip">${p}</div>`).join('')
+      ? prompts.map(p => `<div class="prompt-chip">${escapeHtml(p)}</div>`).join('')
       : `<div class="prompt-chip">"How are things going for you this week?"</div>`;
 
     return `
       <div style="font-size:12px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Generated from data</div>
       ${promptHtml}
-      <div style="font-size:11px;color:var(--mid-brown);margin-top:12px;font-style:italic;">💡 Tip: Personalize these prompts based on what you know about ${studentName}.</div>`;
+      <div style="font-size:11px;color:var(--mid-brown);margin-top:12px;font-style:italic;">💡 Tip: Personalize these prompts based on what you know about ${escapeHtml(studentName)}.</div>`;
   };
 
   return {
@@ -432,11 +432,8 @@ window.getStoreAssessments = getAssessments;
 window.getStoreSubmissions = getSubmissions;
 window.getStoreAttState = getAttState;
 
-window.currentRosterFilter = 'All';
-window.currentRosterSearch = '';
-
 window.setRosterFilter = function(filterVal, btnEl) {
-  window.currentRosterFilter = filterVal;
+  currentRosterFilter = filterVal;
   
   if (btnEl && btnEl.parentElement) {
     const buttons = btnEl.parentElement.querySelectorAll('button');
@@ -455,7 +452,7 @@ window.setRosterFilter = function(filterVal, btnEl) {
 };
 
 window.handleRosterSearch = function(searchVal) {
-  window.currentRosterSearch = searchVal;
+  currentRosterSearch = searchVal;
   window.renderDynamicScreens();
 };
 
@@ -475,7 +472,7 @@ window.renderDynamicScreens = () => {
   let monitoring = [];
   let clear = [];
 
-  const searchQuery = (window.currentRosterSearch || '').trim().toLowerCase();
+  const searchQuery = (currentRosterSearch || '').trim().toLowerCase();
 
   students.forEach(s => {
     // 1. Search Query filter (match name)
@@ -483,7 +480,7 @@ window.renderDynamicScreens = () => {
       return;
     }
 
-    const { tier, reasons } = window.computeRisk(s);
+    const { tier, reasons } = computeRisk(s);
     
     // Determine actual tier
     let actualTier = 'Clear';
@@ -496,7 +493,7 @@ window.renderDynamicScreens = () => {
     }
 
     // 2. Active Tab filter
-    const activeFilter = window.currentRosterFilter || 'All';
+    const activeFilter = currentRosterFilter || 'All';
     if (activeFilter !== 'All' && actualTier !== activeFilter) {
       return;
     }
@@ -665,13 +662,13 @@ window.renderDynamicScreens = () => {
       let sHtml = `<div class="section-header">${title} &middot; ${list.length}</div><div style="padding:0 20px 0;"><div class="card" style="margin-bottom:10px;">`;
       list.forEach(s => {
         sHtml += `
-          <div class="student-row" onclick="openProfile('${s.name}')">
+          <div class="student-row" data-action="openProfile" data-student="${escapeHtml(s.name)}">
             <div class="avatar-ring ${badgeClass.replace('badge-','')}">
-              <div class="avatar avatar-md">${s.initials}</div>
+              <div class="avatar avatar-md">${escapeHtml(s.initials)}</div>
             </div>
             <div class="student-info">
-              <div class="student-name">${s.name}</div>
-              <div class="student-meta">${s.reasons.length > 0 ? s.reasons.join(' &middot; ') : 'All signals normal'}</div>
+              <div class="student-name">${escapeHtml(s.name)}</div>
+              <div class="student-meta">${s.reasons.length > 0 ? escapeHtml(s.reasons.join(' · ')) : 'All signals normal'}</div>
             </div>
             <span class="badge ${badgeClass}">${title}</span>
           </div>`;
@@ -690,6 +687,11 @@ window.renderDynamicScreens = () => {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No students. Click Fill Mock Data to start.</div>';
     }
     rosterContainer.innerHTML = html;
+    rosterContainer.querySelectorAll('[data-action="openProfile"]').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.openProfile) window.openProfile(this.dataset.student);
+      });
+    });
   }
 
   // Render Discovery
@@ -701,13 +703,13 @@ window.renderDynamicScreens = () => {
       let sHtml = `<div class="section-header">${title} &middot; ${list.length}</div><div style="padding:0 20px 0;"><div class="card" style="margin-bottom:10px;">`;
       list.forEach(s => {
         sHtml += `
-          <div class="student-row" onclick="navTo('screen-care')">
+          <div class="student-row" data-action="navToCare">
             <div class="avatar-ring ${badgeClass.replace('badge-','')}">
-              <div class="avatar avatar-md">${s.initials}</div>
+              <div class="avatar avatar-md">${escapeHtml(s.initials)}</div>
             </div>
             <div class="student-info">
-              <div class="student-name">${s.name}</div>
-              <div class="student-meta">${s.reasons.join(' &middot; ')}</div>
+              <div class="student-name">${escapeHtml(s.name)}</div>
+              <div class="student-meta">${escapeHtml(s.reasons.join(' · '))}</div>
             </div>
             <i class="ti ti-chevron-right" style="color:var(--neutral-400);font-size:18px;"></i>
           </div>`;
@@ -721,6 +723,11 @@ window.renderDynamicScreens = () => {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No students require attention right now.</div>';
     }
     discoveryContainer.innerHTML = html;
+    discoveryContainer.querySelectorAll('[data-action="navToCare"]').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.navTo) window.navTo('screen-care');
+      });
+    });
   }
 
   // Render Response
@@ -736,12 +743,12 @@ window.renderDynamicScreens = () => {
           <div class="card">`;
       critical.forEach(s => {
         html += `
-            <div class="student-row" onclick="navTo('screen-care')">
+            <div class="student-row" data-action="navToCare">
               <div class="avatar-ring critical">
-                <div class="avatar avatar-md">${s.initials}</div>
+                <div class="avatar avatar-md">${escapeHtml(s.initials)}</div>
               </div>
               <div class="student-info">
-                <div class="student-name">${s.name}</div>
+                <div class="student-name">${escapeHtml(s.name)}</div>
                 <div class="student-meta">Intervention required</div>
               </div>
               <i class="ti ti-chevron-right" style="color:var(--neutral-400);font-size:18px;"></i>
@@ -752,6 +759,11 @@ window.renderDynamicScreens = () => {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No active workflows.</div>';
     }
     responseContainer.innerHTML = html;
+    responseContainer.querySelectorAll('[data-action="navToCare"]').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.navTo) window.navTo('screen-care');
+      });
+    });
   }
   // Render Recovery
   const recoveryContainer = document.getElementById('recoveryContainer');
@@ -764,12 +776,12 @@ window.renderDynamicScreens = () => {
           <div class="card" style="margin-bottom:10px;">`;
       monitoring.forEach(s => {
         html += `
-            <div class="student-row" onclick="openProfile('${s.name}')">
+            <div class="student-row" data-action="openProfile" data-student="${escapeHtml(s.name)}">
               <div class="avatar-ring monitoring">
-                <div class="avatar avatar-md">${s.initials}</div>
+                <div class="avatar avatar-md">${escapeHtml(s.initials)}</div>
               </div>
               <div class="student-info">
-                <div class="student-name">${s.name}</div>
+                <div class="student-name">${escapeHtml(s.name)}</div>
                 <div class="student-meta">Monitoring signals</div>
               </div>
               <span class="badge badge-monitoring">Watching</span>
@@ -780,6 +792,11 @@ window.renderDynamicScreens = () => {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No students in recovery phase.</div>';
     }
     recoveryContainer.innerHTML = html;
+    recoveryContainer.querySelectorAll('[data-action="openProfile"]').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.openProfile) window.openProfile(this.dataset.student);
+      });
+    });
   }
 
   // Update navbar badges dynamically across all screens

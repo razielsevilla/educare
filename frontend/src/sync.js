@@ -1,11 +1,12 @@
 // src/sync.js
 import { getStore, saveStore, getSyncBlob, applySyncBlob } from './store.js';
 
-const PC_IP = '192.168.100.32';
 const hostname = (typeof window !== 'undefined' && window.location) ? window.location.hostname : 'localhost';
-const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1')
-  ? `http://${PC_IP}:3000/api`
+const defaultApiBase = (hostname === 'localhost' || hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:3000/api'
   : `http://${hostname}:3000/api`;
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || defaultApiBase;
 
 export const registerTeacher = async (name, password) => {
   if (!password) {

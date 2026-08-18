@@ -247,13 +247,13 @@ const defaultState = {
   attState: {},
   assessments: [],
   submissions: {},
-  assessScores: {},
+
   workflows: [],
   behaviorLogs: [],
   careInteractions: [],
   syncMeta: {
     attState: {},
-    assessScores: {},
+
     workflows: {},
     behaviorLogs: {},
     careInteractions: {}
@@ -281,11 +281,7 @@ const buildSyncMeta = (state = {}) => {
     });
   });
 
-  const assessScoresMeta = {};
-  Object.entries(state.assessScores || {}).forEach(([key, value]) => {
-    const updatedAt = normalizeTimestamp(state.syncMeta?.assessScores?.[key]?.updatedAt, Date.now());
-    assessScoresMeta[key] = { value, updatedAt };
-  });
+
 
   const workflowsMeta = {};
   (state.workflows || []).forEach((workflow) => {
@@ -311,7 +307,7 @@ const buildSyncMeta = (state = {}) => {
   return {
     attState: attStateMeta,
     attendanceLog: attendanceLogMeta,
-    assessScores: assessScoresMeta,
+
     workflows: workflowsMeta,
     behaviorLogs: behaviorLogsMeta,
     careInteractions: careInteractionsMeta
@@ -345,8 +341,7 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
   const remoteAttState = remoteState.attState || {};
   const localAttendanceLog = normalizeAttendanceLog(localState.attendanceLog || {});
   const remoteAttendanceLog = normalizeAttendanceLog(remoteState.attendanceLog || {});
-  const localAssessScores = localState.assessScores || {};
-  const remoteAssessScores = remoteState.assessScores || {};
+
 
   const mergedAttState = mergeValueMaps(
     localAttState,
@@ -369,12 +364,7 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
     }
   });
 
-  const mergedAssessScores = mergeValueMaps(
-    localAssessScores,
-    remoteAssessScores,
-    localState.syncMeta?.assessScores || {},
-    remoteState.syncMeta?.assessScores || {}
-  );
+
 
   const workflowMap = new Map();
   [...(localState.workflows || []), ...(remoteState.workflows || [])].forEach((workflow) => {
@@ -432,19 +422,29 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
 
   const mergedCareInteractions = [...careInteractionMap.values()].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
+  const studentKey = (student) => `${student?.name || ''}::${student?.class || ''}`;
+  const studentMap = new Map();
+  [...(localState.students || []), ...(remoteState.students || [])].forEach((student) => {
+    if (!student) return;
+    const normalized = typeof student === 'object' ? student : { name: student, class: '' };
+    studentMap.set(studentKey(normalized), normalized);
+  });
+  const mergedStudents = [...studentMap.values()];
+
   const mergedState = {
     ...localState,
     ...remoteState,
+    students: mergedStudents,
     attendanceLog: mergedAttendanceLog,
     attState: mergedAttState,
-    assessScores: mergedAssessScores,
+
     workflows: mergedWorkflows,
     behaviorLogs: mergedBehaviorLogs,
     careInteractions: mergedCareInteractions,
     syncMeta: {
       attState: {},
       attendanceLog: {},
-      assessScores: {},
+
       workflows: {},
       behaviorLogs: {},
       careInteractions: {}
@@ -486,9 +486,14 @@ export const saveStore = (state) => {
 
   if (sessionPin && hasSecurityPinConfigured()) {
     localStorage.setItem(STORE_KEY, encryptLocalState(safeState, sessionPin));
-  } else {
+  } else if (!hasSecurityPinConfigured()) {
     localStorage.setItem(STORE_KEY, JSON.stringify(safeState));
   }
+  // else: a PIN is configured but this session hasn't unlocked it yet (sessionPin is
+  // empty). getStore() can't have decrypted the real state in that case, so `state`
+  // here is just the empty default shape — writing it would clobber the encrypted
+  // blob with plaintext nothing. Leave STORE_KEY untouched; only the auxiliary
+  // plaintext keys below (teacherId/authToken/etc.) are safe to persist while locked.
 
   if (normalized.teacherId) localStorage.setItem('educare_teacher_id', normalized.teacherId);
   if (normalized.teacherName) localStorage.setItem('educare_teacher_name', normalized.teacherName);
@@ -573,31 +578,7 @@ export const addClass = (className, isAdvisory = false) => {
   }
 };
 
-export const fillMockData = () => {
-  const state = getStore();
-  
-  // Reset all existing records to empty state
-  state.students = [];
-  state.attState = {};
-  state.assessments = [];
-  state.submissions = {};
-  state.assessScores = {};
-  state.workflows = [];
 
-  const mockStudents = [
-    'Maria Santos', 'Jose Reyes', 'Carla Garcia', 'Ana Lim', 'Juan Pablo Cruz',
-    'Ben Torres', 'Rosa Lopez', 'Miguel Villanueva', 'Karla Dela Cruz', 'Paolo Bautista',
-    'Rica Mendoza', 'Dante Pascual', 'Lea Santos', 'Marco Tan', 'Nina Cruz',
-    'Edgar Ramos', 'Fatima Ali', 'Rolando Perez', 'Angie Gomez', 'Carlo Diaz'
-  ];
-  
-  mockStudents.forEach(s => {
-    state.students.push(s);
-    state.attState[s] = 'P'; // Default attendance
-  });
-  
-  saveStore(state);
-};
 
 // Returns the encrypted blob for syncing.
 export const getSyncBlob = async () => {
@@ -611,9 +592,10 @@ export const getSyncBlob = async () => {
   }
 
   const syncState = {
+    students: state.students,
     attState: state.attState,
     attendanceLog: state.attendanceLog,
-    assessScores: state.assessScores,
+
     workflows: state.workflows,
     behaviorLogs: state.behaviorLogs,
     careInteractions: state.careInteractions,
@@ -638,18 +620,20 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
     const decrypted = await decryptSyncBlob(blobStr, passphrase, state.teacherId);
     const remoteData = JSON.parse(decrypted);
     const mergedState = mergeSyncState(state, {
+      students: remoteData.students || [],
       attState: remoteData.attState || {},
       attendanceLog: remoteData.attendanceLog || {},
-      assessScores: remoteData.assessScores || {},
+
       workflows: remoteData.workflows || [],
       behaviorLogs: remoteData.behaviorLogs || [],
       careInteractions: remoteData.careInteractions || [],
       syncMeta: remoteData.syncMeta || buildSyncMeta(remoteData)
     });
 
+    state.students = mergedState.students;
     state.attendanceLog = mergedState.attendanceLog;
     state.attState = mergedState.attState;
-    state.assessScores = mergedState.assessScores;
+
     state.workflows = mergedState.workflows;
     state.behaviorLogs = mergedState.behaviorLogs;
     state.careInteractions = mergedState.careInteractions;
@@ -835,4 +819,18 @@ export const verifySecurityPin = (pin) => {
   setSessionPin(normalized);
   resetPinLockState();
   return { ok: true };
+};
+
+// A forgotten PIN has no recovery path: the local state blob (and any blob already
+// pushed to sync) is encrypted with a key derived from that PIN, so there is no way
+// to recover the underlying data without it. This wipes the now-unrecoverable
+// encrypted blob and the PIN itself so the teacher can set up a new PIN and start a
+// fresh local roster, rather than being silently locked out forever. The caller is
+// responsible for getting explicit confirmation first — this is a destructive,
+// unrecoverable action.
+export const resetForgottenPin = () => {
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(PIN_VERIFIER_KEY);
+  localStorage.removeItem(PIN_LOCK_KEY);
+  clearSessionPin();
 };

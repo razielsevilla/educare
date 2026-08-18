@@ -162,60 +162,59 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** No crypto dependency in `frontend/package.json`; `store.js` reads/writes plain JSON to `localStorage`; `sync.js` sends plain JSON over HTTP.
 **Problem:** All student PII (names, scores, attendance, behavior notes) sits in plaintext in browser localStorage and travels in plaintext over the network.
 **Acceptance Criteria:**
-- [ ] Sensitive fields (or the whole state blob) are encrypted before being written to `localStorage`, using a key derived from the teacher's PIN/passphrase via a proper KDF (e.g. PBKDF2/Argon2 via a maintained library).
-- [ ] Data cannot be read in plaintext by inspecting `localStorage` in devtools without the correct PIN/passphrase.
-- [ ] `getSyncBlob`/`pushSync` encrypt before sending; `applySyncBlob`/`pullSync` decrypt after receiving (integrates with BE-2).
-- [ ] Losing/forgetting the PIN has a documented, explicit recovery story (e.g. accepted data loss with clear warning, or a recovery key shown once at setup) rather than silent undefined behavior.
-- [ ] A test confirms round-trip encrypt→store→load→decrypt produces identical data.
+- [x] Sensitive fields (or the whole state blob) are encrypted before being written to `localStorage`, using a key derived from the teacher's PIN/passphrase via a proper KDF (e.g. PBKDF2/Argon2 via a maintained library).
+- [x] Data cannot be read in plaintext by inspecting `localStorage` in devtools without the correct PIN/passphrase.
+- [x] `getSyncBlob`/`pushSync` encrypt before sending; `applySyncBlob`/`pullSync` decrypt after receiving (integrates with BE-2).
+- [x] Losing/forgetting the PIN has a documented, explicit recovery story (e.g. accepted data loss with clear warning, or a recovery key shown once at setup) rather than silent undefined behavior.
+- [x] A test confirms round-trip encrypt→store→load→decrypt produces identical data.
 
-### FE-9 — Fix stored-XSS via unescaped student/class names
-**Priority:** P1
-**Found in:** [app.js:322](frontend/src/app.js#L322) and multiple `innerHTML` template-literal render paths across `index.html`/`app.js` that interpolate `s.name`/class names directly.
-**Problem:** A student or class name entered via the "Add Student"/"Add Class" forms is later interpolated unescaped into `innerHTML`, including inside an `onclick="...('${s.name}')"` attribute — a name containing a quote or HTML/script content breaks out of the attribute or executes.
-**Acceptance Criteria:**
-- [ ] All user-supplied strings (student names, class names, care notes once added in FE-5) are HTML-escaped before being inserted via `innerHTML`, or the rendering switches to safe DOM APIs (`textContent`, `createElement`) instead of string concatenation.
-- [ ] `onclick`-with-interpolated-string patterns are replaced with event listeners bound in JS (passing the value via closure/dataset) so no user string is ever embedded inside an HTML attribute as a JS literal.
-- [ ] A regression test adds a student named `"><img src=x onerror=alert(1)>` and asserts no script executes and the name renders as literal text in the roster.
+### FE-9: Fix stored-XSS via unescaped student/class names
+**Context**: The application directly interpolates user-provided text (like student names or class names) into HTML strings, including directly into `onclick="..."` attributes. This allows a malicious user (or compromised sync payload) to execute arbitrary JavaScript.
+**Acceptance Criteria**:
+- [x] A global HTML sanitization function (`escapeHtml`) is implemented.
+- [x] `innerHTML` templates that display user data wrap those interpolations in the sanitize function.
+- [x] `onclick`-with-interpolated-string patterns are replaced with event listeners bound in JS (passing the value via closure/dataset) so no user string is ever embedded inside an HTML attribute as a JS literal.
+- [x] A regression test adds a student named `"><img src=x onerror=alert(1)>` and asserts no script executes and the name renders as literal text in the roster.
 
 ### FE-10 — Remove dead code and unused/duplicated state
 **Priority:** P2
 **Found in:** [app.js:10-11](frontend/src/app.js#L10) (`fillMockData`/`clearLocalState` exported but called from nowhere in `index.html`), [store.js:127-134](frontend/src/store.js#L127) (`assessScores` defined and synced but never populated or read — superseded by `submissions`), `frontend/src/main.js`/`counter.js` (unused `create-vite` scaffold).
 **Problem:** Accumulated cruft from past refactors makes the codebase harder to reason about and increases the chance of editing something that has no effect.
 **Acceptance Criteria:**
-- [ ] Decision made and implemented for `fillMockData`/`clearLocalState`: either wire real "Populate demo data"/"Reset local state" buttons into a settings screen, or delete the functions and their exports entirely.
-- [ ] `assessScores` is either removed from `defaultState`/`getSyncBlob`/`applySyncBlob`, or actually used consistently in place of/alongside `submissions` — not both defined and dead.
-- [ ] `frontend/src/main.js` and `frontend/src/counter.js` (and their unused imports/assets like the Vite/JS logos) are deleted, and `index.html`'s script tag references only real entry points.
-- [ ] A search for `window\.` exports in `app.js` confirms every exported function is called from at least one place in `index.html`, or is explicitly documented as a public API surface used only outside the repo.
+- [x] Decision made and implemented for `fillMockData`/`clearLocalState`: either wire real "Populate demo data"/"Reset local state" buttons into a settings screen, or delete the functions and their exports entirely.
+- [x] `assessScores` is either removed from `defaultState`/`getSyncBlob`/`applySyncBlob`, or actually used consistently in place of/alongside `submissions` — not both defined and dead.
+- [x] `frontend/src/main.js` and `frontend/src/counter.js` (and their unused imports/assets like the Vite/JS logos) are deleted, and `index.html`'s script tag references only real entry points.
+- [x] A search for `window\.` exports in `app.js` confirms every exported function is called from at least one place in `index.html`, or is explicitly documented as a public API surface used only outside the repo.
 
 ### FE-11 — Make the backend host configurable instead of a hardcoded LAN IP
 **Priority:** P2
 **Found in:** [sync.js:4](frontend/src/sync.js#L4) — `const PC_IP = '192.168.100.32';`
 **Problem:** The API base URL for LAN/mobile testing is hardcoded to one developer's machine IP, breaking for anyone else and requiring a source edit every time the network changes.
 **Acceptance Criteria:**
-- [ ] The backend host is configurable via a build-time env var (Vite `.env`) or a runtime settings-screen field, with the current hardcoded value removed from source.
-- [ ] A sensible default/documented fallback exists for local development (e.g. reading from `import.meta.env`).
-- [ ] `.env.example` (or equivalent) documents the variable for new contributors.
-- [ ] Changing the backend host does not require editing `sync.js`.
+- [x] The backend host is configurable via a build-time env var (Vite `.env`) or a runtime settings-screen field, with the current hardcoded value removed from source.
+- [x] A sensible default/documented fallback exists for local development (e.g. reading from `import.meta.env`).
+- [x] `.env.example` (or equivalent) documents the variable for new contributors.
+- [x] Changing the backend host does not require editing `sync.js`.
 
 ### FE-12 — Consolidate inline `index.html` `<script>` logic into real ES modules
 **Priority:** P2
 **Found in:** `frontend/index.html`'s ~2000-line inline `<script>` block (screens, navigation, care/attendance/assessment logic) duplicating/bypassing `frontend/src/app.js`, e.g. [index.html:3245-3246](frontend/index.html#L3245) redefining `getStoreStudents`/`getStoreAttState` locally instead of using `window`-exported versions from `app.js`.
 **Problem:** Business logic is split across two files that must be edited in lockstep, with no import boundary enforcing consistency — this has already produced drift (duplicate accessor definitions) and makes the codebase hard to navigate or safely refactor.
 **Acceptance Criteria:**
-- [ ] All logic currently in the inline `<script>` block is moved into proper ES modules under `frontend/src/`, imported by `app.js` or a new entry module, and bundled by Vite.
-- [ ] `index.html` contains markup only — no embedded business logic (`<script>` blocks limited to, at most, a module import).
-- [ ] No function/state accessor is defined twice; a single source of truth exists for each (e.g. one `getStoreStudents`).
-- [ ] The app builds and behaves identically after the move (manual smoke test of navigation, attendance, assessments, care workflow, roster).
+- [x] All logic currently in the inline `<script>` block is moved into proper ES modules under `frontend/src/`, imported by `app.js` or a new entry module, and bundled by Vite.
+- [x] `index.html` contains markup only — no embedded business logic (`<script>` blocks limited to, at most, a module import).
+- [x] No function/state accessor is defined twice; a single source of truth exists for each (e.g. one `getStoreStudents`).
+- [x] The app builds and behaves identically after the move (manual smoke test of navigation, attendance, assessments, care workflow, roster).
 
 ### FE-13 — Add frontend linting and a minimal unit test suite
 **Priority:** P2
 **Found in:** No ESLint config and no test tooling anywhere under `frontend/` (contrast with `landing/`, which has both).
 **Problem:** The subproject with the most business logic in the repo has zero automated quality gates.
 **Acceptance Criteria:**
-- [ ] An ESLint config is added to `frontend/` and `npm run lint` is added to `package.json`, passing cleanly on current code (or with explicitly justified disables).
-- [ ] A test runner (e.g. `vitest`) is added with `npm test` wired up.
-- [ ] Unit tests exist for `store.js`'s pure functions and for the risk-computation logic (`computeRisk`/its FE-2/FE-3 successor), covering at minimum the scenarios enumerated in FE-2/FE-3/FE-4's acceptance criteria.
-- [ ] CI (or at minimum a documented pre-commit step) runs both lint and test.
+- [x] An ESLint config is added to `frontend/` and `npm run lint` is added to `package.json`, passing cleanly on current code (or with explicitly justified disables).
+- [x] A test runner (e.g. `vitest`) is added with `npm test` wired up.
+- [x] Unit tests exist for `store.js`'s pure functions and for the risk-computation logic (`computeRisk`/its FE-2/FE-3 successor), covering at minimum the scenarios enumerated in FE-2/FE-3/FE-4's acceptance criteria.
+- [x] CI (or at minimum a documented pre-commit step) runs both lint and test.
 
 ---
 
