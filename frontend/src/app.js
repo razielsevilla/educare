@@ -1,5 +1,34 @@
-import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword } from './store.js';
+import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword, setupSecurityPin, verifySecurityPin, getPinLockStatus, hasSecurityPinConfigured, hasSessionPin, clearSessionPin } from './store.js';
 import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
+
+let backgroundSyncStarted = false;
+
+const ensureBackgroundSyncStarted = () => {
+  if (backgroundSyncStarted) return;
+  backgroundSyncStarted = true;
+  startBackgroundSync(() => {
+    console.log('Data synced from server. Rerendering UI...');
+    if (window.renderDynamicScreens) window.renderDynamicScreens();
+  });
+};
+
+const syncAfterUnlock = async () => {
+  if (!hasSessionPin()) return false;
+  const updated = await pullSync();
+  ensureBackgroundSyncStarted();
+  if (updated && window.renderDynamicScreens) {
+    window.renderDynamicScreens();
+  }
+  return updated;
+};
+
+const getBiometricPlugin = () => {
+  return window.Capacitor?.Plugins?.NativeBiometric;
+};
+
+const isAndroidCapacitor = () => {
+  return window.Capacitor?.getPlatform?.() === 'android';
+};
 
 // Expose store globally so inline scripts in index.html still work without breaking
 window.getStore = getStore;
@@ -27,6 +56,96 @@ window.addCareInteraction = (student, actionTaken, outcomeSelected, notes, times
 };
 window.getCareInteractionsForStudent = getCareInteractionsForStudent;
 window.getCareInteractionsDue = getCareInteractionsDue;
+window.hasSecurityPinConfigured = hasSecurityPinConfigured;
+window.getPinLockStatus = getPinLockStatus;
+window.clearPinSession = clearSessionPin;
+window.syncAfterUnlock = syncAfterUnlock;
+window.setupSecurityPin = (pin) => {
+  setupSecurityPin(pin);
+  const state = getStore();
+  saveStore(state);
+  return true;
+};
+window.verifySecurityPin = (pin) => {
+  const result = verifySecurityPin(pin);
+  if (result.ok) {
+    const state = getStore();
+    saveStore(state);
+  }
+  return result;
+};
+
+window.isBiometricAvailable = async () => {
+  if (!isAndroidCapacitor()) return { available: false };
+  const plugin = getBiometricPlugin();
+  if (!plugin?.isAvailable) return { available: false };
+
+  try {
+    const result = await plugin.isAvailable();
+    return {
+      available: Boolean(result?.isAvailable),
+      biometryType: result?.biometryType || ''
+    };
+  } catch (_err) {
+    return { available: false };
+  }
+};
+
+window.saveBiometricPin = async (pin) => {
+  if (!/^\d{4}$/.test(String(pin || ''))) return false;
+  if (!isAndroidCapacitor()) return false;
+
+  const plugin = getBiometricPlugin();
+  if (!plugin?.setCredentials) return false;
+
+  try {
+    const state = getStore();
+    await plugin.setCredentials({
+      username: state.teacherId || state.teacherName || 'educare',
+      password: pin,
+      server: 'educare-pin-lock'
+    });
+    return true;
+  } catch (_err) {
+    return false;
+  }
+};
+
+window.tryBiometricUnlock = async () => {
+  if (!isAndroidCapacitor()) {
+    return { ok: false, reason: 'unsupported' };
+  }
+
+  const plugin = getBiometricPlugin();
+  if (!plugin?.verifyIdentity || !plugin?.getCredentials) {
+    return { ok: false, reason: 'unsupported' };
+  }
+
+  try {
+    await plugin.verifyIdentity({
+      reason: 'Unlock EduCare',
+      title: 'Biometric unlock',
+      subtitle: 'Use your biometric credential',
+      description: 'Authenticate to unlock local student data'
+    });
+
+    const creds = await plugin.getCredentials({ server: 'educare-pin-lock' });
+    const pin = String(creds?.password || '');
+    if (!/^\d{4}$/.test(pin)) {
+      return { ok: false, reason: 'not-enrolled' };
+    }
+
+    const result = window.verifySecurityPin(pin);
+    if (!result.ok) {
+      return { ok: false, reason: result.reason || 'invalid' };
+    }
+
+    await syncAfterUnlock();
+    return { ok: true };
+  } catch (_err) {
+    return { ok: false, reason: 'failed' };
+  }
+};
 
 // Risk Computation Engine
 export const computeRisk = (student) => {
@@ -697,14 +816,9 @@ async function initApp() {
     }
   }
 
-  // Pull latest data on load
-  await pullSync();
-  
-  // Start background sync polling (single instance with UI refresh callback)
-  startBackgroundSync(() => {
-    console.log('Data synced from server. Rerendering UI...');
-    if (window.renderDynamicScreens) window.renderDynamicScreens();
-  });
+  if (hasSessionPin()) {
+    await syncAfterUnlock();
+  }
 }
 
 // Ensure the prototype's hardcoded state can be synced

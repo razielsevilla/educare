@@ -142,20 +142,20 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [index.html:3251-3373](frontend/index.html#L3251) — persona data exists for exactly "Maria Santos," "Dante Pascual," and "Carla Garcia"; every other student falls back to Maria Santos's fabricated case.
 **Problem:** Every student besides three specific demo names sees someone else's completely unrelated case history and quotes on their own profile — a correctness bug, not just a content gap.
 **Acceptance Criteria:**
-- [ ] Profile insight cards, triage summaries, and check-in prompt sections are generated from the real `reasons`/tier data computed for that specific student (from FE-2/FE-3/FE-4), not a lookup keyed on a fixed name list.
-- [ ] No student is ever shown another student's data. Verified by a test that opens a profile for an arbitrary/unknown student name and asserts the rendered content only references that student's own computed signals.
-- [ ] Any remaining example/sample copy for demo purposes is clearly separated behind a "demo mode" flag rather than being the silent default fallback for real data.
+- [x] Profile insight cards, triage summaries, and check-in prompt sections are generated from the real `reasons`/tier data computed for that specific student (from FE-2/FE-3/FE-4), not a lookup keyed on a fixed name list.
+- [x] No student is ever shown another student's data. Verified by a test that opens a profile for an arbitrary/unknown student name and asserts the rendered content only references that student's own computed signals.
+- [x] Any remaining example/sample copy for demo purposes is clearly separated behind a "demo mode" flag rather than being the silent default fallback for real data.
 
 ### FE-7 — Make the PIN lock meaningful or stop presenting it as a security feature
 **Priority:** P0
 **Found in:** [index.html:3574](frontend/index.html#L3574) — `pinVal === (localStorage.getItem('educare_pin') || '1234')`, checked entirely client-side.
 **Problem:** The PIN is a client-side string comparison with a hardcoded fallback ('1234'), trivially bypassed via devtools or by reading localStorage directly, and it guards data that already sits unencrypted in the same localStorage. It provides no real protection while README markets it as securing student data.
 **Acceptance Criteria:**
-- [ ] The `'1234'` hardcoded fallback is removed; PIN setup is mandatory during onboarding with no default.
-- [ ] The underlying student data (FE-8) is encrypted at rest using a key derived from the PIN/passphrase, so the PIN gate is backed by something a devtools inspection can't trivially bypass.
-- [ ] Repeated wrong-PIN attempts are throttled (e.g. increasing delay or lockout after N attempts).
-- [ ] On Android builds, the app offers real biometric authentication via a Capacitor biometrics plugin as an alternative to PIN, matching the README's "PIN or biometric" claim.
-- [ ] README's security claims are re-verified against the implementation and corrected if any part still doesn't match.
+- [x] The `'1234'` hardcoded fallback is removed; PIN setup is mandatory during onboarding with no default.
+- [x] The underlying student data (FE-8) is encrypted at rest using a key derived from the PIN/passphrase, so the PIN gate is backed by something a devtools inspection can't trivially bypass.
+- [x] Repeated wrong-PIN attempts are throttled (e.g. increasing delay or lockout after N attempts).
+- [x] On Android builds, the app offers real biometric authentication via a Capacitor biometrics plugin as an alternative to PIN, matching the README's "PIN or biometric" claim.
+- [x] README's security claims are re-verified against the implementation and corrected if any part still doesn't match.
 
 ### FE-8 — Encrypt data at rest and in transit on the client
 **Priority:** P0 (pairs with BE-2)

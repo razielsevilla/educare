@@ -1,7 +1,177 @@
 // src/store.js
 import { encryptSyncBlob, decryptSyncBlob, looksLikeEncryptedBlob } from './crypto.js';
+import CryptoJS from 'crypto-js';
 
 const STORE_KEY = 'educare_local_state';
+const LEGACY_PIN_KEY = 'educare_pin';
+const PIN_VERIFIER_KEY = 'educare_pin_verifier';
+const PIN_LOCK_KEY = 'educare_pin_lock';
+const ENCRYPTED_LOCAL_PREFIX = 'enc:local:v1:';
+const PIN_KDF_ITERATIONS = 250000;
+
+let sessionPin = '';
+
+const randomHex = (byteLength = 16) => {
+  const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+const timingSafeEquals = (left, right) => {
+  if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    mismatch |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  }
+  return mismatch === 0;
+};
+
+const derivePinDigest = (pin, saltHex, iterations = PIN_KDF_ITERATIONS) => {
+  const key = CryptoJS.PBKDF2(pin, CryptoJS.enc.Hex.parse(saltHex), {
+    keySize: 256 / 32,
+    iterations,
+    hasher: CryptoJS.algo.SHA256
+  });
+  return key.toString(CryptoJS.enc.Hex);
+};
+
+const getStoredPinVerifier = () => {
+  const raw = localStorage.getItem(PIN_VERIFIER_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.salt || !parsed.hash) return null;
+    return {
+      salt: String(parsed.salt),
+      hash: String(parsed.hash),
+      iterations: Number(parsed.iterations) || PIN_KDF_ITERATIONS,
+      createdAt: Number(parsed.createdAt) || Date.now()
+    };
+  } catch (_err) {
+    return null;
+  }
+};
+
+const setStoredPinVerifier = (pin) => {
+  const salt = randomHex(16);
+  const hash = derivePinDigest(pin, salt, PIN_KDF_ITERATIONS);
+  localStorage.setItem(PIN_VERIFIER_KEY, JSON.stringify({
+    salt,
+    hash,
+    iterations: PIN_KDF_ITERATIONS,
+    createdAt: Date.now()
+  }));
+};
+
+const getPinLockState = () => {
+  const raw = localStorage.getItem(PIN_LOCK_KEY);
+  if (!raw) {
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      failedAttempts: Number(parsed.failedAttempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0
+    };
+  } catch (_err) {
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
+};
+
+const setPinLockState = (nextState) => {
+  localStorage.setItem(PIN_LOCK_KEY, JSON.stringify({
+    failedAttempts: Number(nextState.failedAttempts) || 0,
+    lockedUntil: Number(nextState.lockedUntil) || 0
+  }));
+};
+
+const resetPinLockState = () => {
+  setPinLockState({ failedAttempts: 0, lockedUntil: 0 });
+};
+
+const computeLockDelayMs = (failedAttempts) => {
+  if (failedAttempts <= 2) return 0;
+  if (failedAttempts >= 8) return 5 * 60 * 1000;
+  return Math.min(60 * 1000, 1000 * (2 ** (failedAttempts - 3)));
+};
+
+const registerFailedPinAttempt = () => {
+  const state = getPinLockState();
+  const nextAttempts = (state.failedAttempts || 0) + 1;
+  const delayMs = computeLockDelayMs(nextAttempts);
+  const lockedUntil = delayMs > 0 ? Date.now() + delayMs : 0;
+  const next = { failedAttempts: nextAttempts, lockedUntil };
+  setPinLockState(next);
+  return next;
+};
+
+const deriveLocalStorageKey = (pin, saltHex) => {
+  return CryptoJS.PBKDF2(pin, CryptoJS.enc.Hex.parse(saltHex), {
+    keySize: 256 / 32,
+    iterations: PIN_KDF_ITERATIONS,
+    hasher: CryptoJS.algo.SHA256
+  });
+};
+
+const encryptLocalState = (state, pin) => {
+  const ivHex = randomHex(16);
+  const saltHex = randomHex(16);
+  const key = deriveLocalStorageKey(pin, saltHex);
+  const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(state), key, {
+    iv: CryptoJS.enc.Hex.parse(ivHex),
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  }).ciphertext.toString(CryptoJS.enc.Base64);
+
+  const payload = {
+    v: 1,
+    iv: ivHex,
+    salt: saltHex,
+    iterations: PIN_KDF_ITERATIONS,
+    ct: ciphertext
+  };
+
+  return `${ENCRYPTED_LOCAL_PREFIX}${btoa(JSON.stringify(payload))}`;
+};
+
+const decryptLocalState = (encrypted, pin) => {
+  const encoded = encrypted.replace(ENCRYPTED_LOCAL_PREFIX, '');
+  const payload = JSON.parse(atob(encoded));
+  const key = deriveLocalStorageKey(pin, payload.salt);
+  const decrypted = CryptoJS.AES.decrypt(
+    {
+      ciphertext: CryptoJS.enc.Base64.parse(payload.ct)
+    },
+    key,
+    {
+      iv: CryptoJS.enc.Hex.parse(payload.iv),
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    }
+  );
+  const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
+  if (!plaintext) {
+    throw new Error('Unable to decrypt local state with provided PIN');
+  }
+  return JSON.parse(plaintext);
+};
+
+const migrateLegacyPinStorage = () => {
+  const legacyPin = localStorage.getItem(LEGACY_PIN_KEY);
+  if (!legacyPin) return;
+
+  if (!getStoredPinVerifier()) {
+    setStoredPinVerifier(legacyPin);
+  }
+  localStorage.removeItem(LEGACY_PIN_KEY);
+};
+
+migrateLegacyPinStorage();
 
 const getDateKey = (date = new Date()) => {
   const normalized = new Date(date);
@@ -68,7 +238,7 @@ const defaultState = {
   teacherId: localStorage.getItem('educare_teacher_id') || '',
   teacherName: localStorage.getItem('educare_teacher_name') || '',
   authToken: localStorage.getItem('educare_auth_token') || '',
-  pin: localStorage.getItem('educare_pin') || '',
+  pin: '',
   classes: JSON.parse(localStorage.getItem('educare_classes') || '[]'),
   currentClass: localStorage.getItem('educare_current_class') || '',
   lastSyncId: parseInt(localStorage.getItem('educare_last_sync_id') || '0', 10),
@@ -291,27 +461,42 @@ export const getStore = () => {
   const stored = localStorage.getItem(STORE_KEY);
   if (stored) {
     try {
+      if (stored.startsWith(ENCRYPTED_LOCAL_PREFIX)) {
+        if (!sessionPin) {
+          return migrateLegacyAttendance({ ...defaultState, pin: '' });
+        }
+
+        const parsedEncrypted = decryptLocalState(stored, sessionPin);
+        return migrateLegacyAttendance({ ...defaultState, ...parsedEncrypted, pin: sessionPin });
+      }
+
       const parsed = JSON.parse(stored);
-      return migrateLegacyAttendance({ ...defaultState, ...parsed });
+      return migrateLegacyAttendance({ ...defaultState, ...parsed, pin: sessionPin });
     } catch (e) {
       console.error('Failed to parse store', e);
-      return migrateLegacyAttendance({ ...defaultState });
+      return migrateLegacyAttendance({ ...defaultState, pin: sessionPin });
     }
   }
-  return migrateLegacyAttendance({ ...defaultState });
+  return migrateLegacyAttendance({ ...defaultState, pin: sessionPin });
 };
 
 export const saveStore = (state) => {
   const normalized = migrateLegacyAttendance({ ...defaultState, ...state });
-  localStorage.setItem(STORE_KEY, JSON.stringify(normalized));
+  const safeState = { ...normalized, pin: '' };
+
+  if (sessionPin && hasSecurityPinConfigured()) {
+    localStorage.setItem(STORE_KEY, encryptLocalState(safeState, sessionPin));
+  } else {
+    localStorage.setItem(STORE_KEY, JSON.stringify(safeState));
+  }
+
   if (normalized.teacherId) localStorage.setItem('educare_teacher_id', normalized.teacherId);
   if (normalized.teacherName) localStorage.setItem('educare_teacher_name', normalized.teacherName);
   if (normalized.authToken) localStorage.setItem('educare_auth_token', normalized.authToken);
-  if (normalized.pin !== undefined) localStorage.setItem('educare_pin', normalized.pin);
   if (normalized.currentClass !== undefined) localStorage.setItem('educare_current_class', normalized.currentClass);
   if (normalized.classes) localStorage.setItem('educare_classes', JSON.stringify(normalized.classes));
   localStorage.setItem('educare_last_sync_id', String(normalized.lastSyncId ?? 0));
-  return normalized;
+  return { ...normalized, pin: sessionPin };
 };
 
 export const getAttendance = () => {
@@ -417,7 +602,7 @@ export const fillMockData = () => {
 // Returns the encrypted blob for syncing.
 export const getSyncBlob = async () => {
   const state = getStore();
-  const passphrase = state.pin || '';
+  const passphrase = sessionPin || '';
   if (!state.teacherId) {
     throw new Error('teacherId is required before syncing encrypted state');
   }
@@ -445,7 +630,7 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
       throw new Error('Blob is not an encrypted EduCare sync payload');
     }
 
-    const passphrase = state.pin || '';
+    const passphrase = sessionPin || '';
     if (!passphrase) {
       throw new Error('PIN/passphrase is required to decrypt the sync payload');
     }
@@ -574,4 +759,80 @@ export const getOrCreateAuthPassword = () => {
     localStorage.setItem(AUTH_PASSWORD_KEY, password);
   }
   return password;
+};
+
+export const hasSecurityPinConfigured = () => Boolean(getStoredPinVerifier());
+
+export const getPinLockStatus = () => {
+  const state = getPinLockState();
+  const now = Date.now();
+  const isLocked = state.lockedUntil > now;
+  return {
+    failedAttempts: state.failedAttempts,
+    isLocked,
+    lockedUntil: isLocked ? state.lockedUntil : 0,
+    remainingMs: isLocked ? Math.max(0, state.lockedUntil - now) : 0
+  };
+};
+
+export const setSessionPin = (pin) => {
+  sessionPin = String(pin || '');
+};
+
+export const clearSessionPin = () => {
+  sessionPin = '';
+};
+
+export const hasSessionPin = () => Boolean(sessionPin);
+
+export const setupSecurityPin = (pin) => {
+  const normalized = String(pin || '').trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    throw new Error('PIN must be exactly 4 digits');
+  }
+
+  setStoredPinVerifier(normalized);
+  setSessionPin(normalized);
+  resetPinLockState();
+  localStorage.removeItem(LEGACY_PIN_KEY);
+  return true;
+};
+
+export const verifySecurityPin = (pin) => {
+  const normalized = String(pin || '').trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    return { ok: false, reason: 'format' };
+  }
+
+  const lockStatus = getPinLockStatus();
+  if (lockStatus.isLocked) {
+    return {
+      ok: false,
+      reason: 'locked',
+      lockedUntil: lockStatus.lockedUntil,
+      remainingMs: lockStatus.remainingMs
+    };
+  }
+
+  const verifier = getStoredPinVerifier();
+  if (!verifier) {
+    return { ok: false, reason: 'not-configured' };
+  }
+
+  const computedHash = derivePinDigest(normalized, verifier.salt, verifier.iterations);
+  if (!timingSafeEquals(computedHash, verifier.hash)) {
+    const failed = registerFailedPinAttempt();
+    const now = Date.now();
+    return {
+      ok: false,
+      reason: failed.lockedUntil > now ? 'locked' : 'invalid',
+      failedAttempts: failed.failedAttempts,
+      lockedUntil: failed.lockedUntil,
+      remainingMs: failed.lockedUntil > now ? failed.lockedUntil - now : 0
+    };
+  }
+
+  setSessionPin(normalized);
+  resetPinLockState();
+  return { ok: true };
 };

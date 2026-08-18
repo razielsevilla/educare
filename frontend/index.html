@@ -1980,7 +1980,7 @@
           <div class="pin-dot" id="d3"></div>
           <div class="pin-dot" id="d4"></div>
         </div>
-        <div style="font-size:14px;color:var(--mid-brown);margin-top:8px;">Enter your PIN</div>
+        <div style="font-size:14px;color:var(--mid-brown);margin-top:8px;" id="pin-status-msg">Enter your PIN</div>
         <div class="pin-keypad" id="pinKeypad">
           <button class="pin-key" onclick="pinPress('1')">1</button>
           <button class="pin-key" onclick="pinPress('2')">2</button>
@@ -1995,7 +1995,7 @@
           <button class="pin-key" onclick="pinPress('0')">0</button>
           <button class="pin-key del" onclick="pinDel()"><i class="ti ti-backspace"></i></button>
         </div>
-        <div style="margin-top:20px;font-size:13px;color:var(--amber);cursor:pointer;">Use biometric instead</div>
+        <button id="pin-biometric-btn" onclick="handleBiometricUnlock()" style="margin-top:20px;font-size:13px;color:var(--amber);cursor:pointer;background:none;border:none;display:none;">Use biometric instead</button>
       </div>
 
       <!-- ══════════════════════════════ -->
@@ -2017,7 +2017,7 @@
 
             <div>
               <label class="form-label">Security PIN (4 digits)</label>
-              <input type="password" id="setup-teacher-pin" maxlength="4" placeholder="e.g. 1234" class="form-input" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+              <input type="password" id="setup-teacher-pin" maxlength="4" placeholder="Enter a 4-digit PIN" class="form-input" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             </div>
 
             <div>
@@ -3556,7 +3556,8 @@
     setTimeout(() => {
       const storedTeacher = localStorage.getItem('educare_teacher_name');
       const storedClass = localStorage.getItem('educare_current_class');
-      if (!storedTeacher || !storedClass) {
+      const hasPin = window.hasSecurityPinConfigured ? window.hasSecurityPinConfigured() : false;
+      if (!storedTeacher || !storedClass || !hasPin) {
         navTo('screen-setup');
       } else {
         // Update PIN screen dynamically
@@ -3570,25 +3571,97 @@
           pinAvatar.textContent = initials;
         }
         navTo('screen-pin');
+        refreshBiometricButton();
+        refreshPinLockMessage();
       }
     }, 2000);
 
     // ── PIN ──
+    function formatLockDelay(ms) {
+      const seconds = Math.max(1, Math.ceil(ms / 1000));
+      return `${seconds}s`;
+    }
+
+    function refreshPinLockMessage() {
+      const pinStatus = document.getElementById('pin-status-msg');
+      if (!pinStatus || !window.getPinLockStatus) return;
+
+      const lock = window.getPinLockStatus();
+      if (lock.isLocked) {
+        pinStatus.textContent = `Too many attempts. Try again in ${formatLockDelay(lock.remainingMs)}.`;
+      } else {
+        pinStatus.textContent = 'Enter your PIN';
+      }
+    }
+
+    async function refreshBiometricButton() {
+      const btn = document.getElementById('pin-biometric-btn');
+      if (!btn || !window.isBiometricAvailable) return;
+
+      const info = await window.isBiometricAvailable();
+      btn.style.display = info.available ? 'inline-block' : 'none';
+    }
+
+    async function handleBiometricUnlock() {
+      if (!window.tryBiometricUnlock) {
+        showToast('Biometric unlock is unavailable');
+        return;
+      }
+
+      const result = await window.tryBiometricUnlock();
+      if (result.ok) {
+        pinVal = '';
+        updatePinDots();
+        navTo('screen-dashboard');
+        showToast('Unlocked with biometrics');
+        return;
+      }
+
+      if (result.reason === 'not-enrolled') {
+        showToast('Use PIN once to enable biometric unlock');
+      } else if (result.reason === 'unsupported') {
+        showToast('Biometric unlock not available on this device');
+      } else {
+        showToast('Biometric unlock failed');
+      }
+    }
+
     function pinPress(d) {
+      if (window.getPinLockStatus) {
+        const lock = window.getPinLockStatus();
+        if (lock.isLocked) {
+          refreshPinLockMessage();
+          showToast(`Try again in ${formatLockDelay(lock.remainingMs)}`);
+          return;
+        }
+      }
+
       if (pinVal.length >= 4) return;
       pinVal += d;
       updatePinDots();
       if (pinVal.length === 4) {
         setTimeout(() => {
-          const storedPin = localStorage.getItem('educare_pin') || '1234';
-          if (pinVal === storedPin) {
+          const attemptedPin = pinVal;
+          const result = window.verifySecurityPin ? window.verifySecurityPin(attemptedPin) : { ok: false, reason: 'invalid' };
+          if (result.ok) {
             pinVal = '';
             updatePinDots();
+            if (window.syncAfterUnlock) {
+              window.syncAfterUnlock();
+            }
+            if (window.saveBiometricPin) {
+              window.saveBiometricPin(attemptedPin);
+            }
             navTo('screen-dashboard');
           } else {
             pinVal = '';
             updatePinDots();
-            showToast('Incorrect PIN');
+            refreshPinLockMessage();
+            if (result.reason === 'locked') {
+              showToast(`Locked. Try again in ${formatLockDelay(result.remainingMs || 1000)}`);
+            } else {
+              showToast('Incorrect PIN');
+            }
           }
         }, 400);
       }
@@ -3666,7 +3739,7 @@
     }
 
     // ── INITIAL ACCOUNT SETUP ──
-    function handleCreateClass() {
+    async function handleCreateClass() {
       const teacherName = document.getElementById('setup-teacher-name').value.trim();
       const pin = document.getElementById('setup-teacher-pin').value.trim();
       const className = document.getElementById('setup-class-name').value.trim();
@@ -3687,14 +3760,21 @@
 
       // Save credentials & initialize class
       localStorage.setItem('educare_teacher_name', teacherName);
-      localStorage.setItem('educare_pin', pin);
       localStorage.setItem('educare_current_class', className);
       localStorage.setItem('educare_classes', JSON.stringify([{ name: className, isAdvisory: true }]));
+
+      if (window.setupSecurityPin) {
+        try {
+          window.setupSecurityPin(pin);
+        } catch (_err) {
+          showToast('Failed to set PIN. Please try again.');
+          return;
+        }
+      }
 
       // Initialize store
       const state = window.getStore ? window.getStore() : { students: [], attState: {} };
       state.teacherName = teacherName;
-      state.pin = pin;
       state.currentClass = className;
       state.classes = [{ name: className, isAdvisory: true }];
       
@@ -3707,6 +3787,10 @@
 
       if (window.saveStore) {
         window.saveStore(state);
+      }
+
+      if (window.saveBiometricPin) {
+        await window.saveBiometricPin(pin);
       }
 
       // Update UI variables
@@ -3728,6 +3812,10 @@
       
       if (window.renderDynamicScreens) {
         window.renderDynamicScreens();
+      }
+
+      if (window.syncAfterUnlock) {
+        window.syncAfterUnlock();
       }
       
       // Initialize other components
