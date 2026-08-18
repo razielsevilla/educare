@@ -1,5 +1,5 @@
-import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows } from './store.js';
-import { registerTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
+import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows, getOrCreateAuthPassword } from './store.js';
+import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 
 // Expose store globally so inline scripts in index.html still work without breaking
 window.getStore = getStore;
@@ -455,10 +455,19 @@ async function initApp() {
   window.renderDynamicScreens();
   
   let state = getStore();
-  
+  const authPassword = getOrCreateAuthPassword();
+
   if (!state.teacherId) {
     console.log('Registering teacher...');
-    await registerTeacher('Demo Teacher');
+    await registerTeacher(state.teacherName || 'Demo Teacher', authPassword);
+  } else {
+    const refreshed = await loginTeacher(state.teacherId, authPassword);
+    if (!refreshed) {
+      // Token expired/missing and this device is unknown to the backend (e.g. a
+      // fresh/reset database) — bootstrap a new account rather than sync failing silently.
+      console.log('Session could not be refreshed; registering a new teacher account...');
+      await registerTeacher(state.teacherName || 'Demo Teacher', authPassword);
+    }
   }
 
   // Pull latest data on load

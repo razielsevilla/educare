@@ -7,7 +7,11 @@ const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1')
   ? `http://${PC_IP}:3000/api` 
   : `http://${hostname}:3000/api`;
 
-export const registerTeacher = async (name, password = 'demo-teacher-password') => {
+export const registerTeacher = async (name, password) => {
+  if (!password) {
+    throw new Error('A password is required to register a teacher account');
+  }
+
   try {
     const res = await fetch(`${API_BASE}/teacher/register`, {
       method: 'POST',
@@ -27,6 +31,31 @@ export const registerTeacher = async (name, password = 'demo-teacher-password') 
   } catch (err) {
     console.error('Registration failed:', err);
     throw err;
+  }
+};
+
+// Refreshes the session token for an existing teacherId (e.g. after the 7-day token
+// expires, or after localStorage-clearing/reinstall on a device that still knows its
+// auth password). Returns false rather than throwing so callers can fall back to
+// registerTeacher() when there's nothing to recover.
+export const loginTeacher = async (teacherId, password) => {
+  try {
+    const res = await fetch(`${API_BASE}/teacher/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teacherId, password })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      const state = getStore();
+      state.authToken = data.token;
+      saveStore(state);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Login failed:', err);
+    return false;
   }
 };
 

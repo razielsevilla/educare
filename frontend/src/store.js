@@ -311,3 +311,22 @@ export const moveToRecovery = (student) => {
 export const getWorkflows = () => {
   return getStore().workflows || [];
 };
+
+// Per-device credential used only to authenticate this device to the sync backend.
+// It is intentionally unrelated to the teacher's PIN (which derives the local
+// encryption key, see crypto.js) and is never included in the sync blob.
+const AUTH_PASSWORD_KEY = 'educare_auth_password';
+
+const generateRandomPassword = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+export const getOrCreateAuthPassword = () => {
+  let password = localStorage.getItem(AUTH_PASSWORD_KEY);
+  if (!password) {
+    password = generateRandomPassword();
+    localStorage.setItem(AUTH_PASSWORD_KEY, password);
+  }
+  return password;
+};

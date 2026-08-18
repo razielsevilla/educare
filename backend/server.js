@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { z } = require('zod');
 const db = require('./database');
@@ -13,7 +14,20 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'educare-dev-secret-change-me';
+
+// No hardcoded fallback secret: if JWT_SECRET isn't configured, generate a random
+// one for this process only. Tokens signed with it stop working on restart, which
+// is a loud, safe failure mode — the alternative (a fixed default baked into source)
+// would let anyone reading this repo forge a valid token for any teacherId.
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  const generated = crypto.randomBytes(32).toString('hex');
+  console.warn(
+    '[educare] WARNING: JWT_SECRET is not set. Using a random secret generated for this ' +
+    'process only — all issued tokens will become invalid on restart. Set JWT_SECRET in ' +
+    'your environment for stable sessions (see .env.example).'
+  );
+  return generated;
+})();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ENCRYPTED_BLOB_PREFIX = 'enc:v1:';
 const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,capacitor://localhost,http://localhost:3000,http://127.0.0.1:3000').split(',').map((origin) => origin.trim()).filter(Boolean);
@@ -56,6 +70,15 @@ const syncLimiter = rateLimit({
   keyGenerator: getRateLimitKey,
 });
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  keyGenerator: getRateLimitKey,
+});
+
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -76,6 +99,11 @@ const pullSyncSchema = z.object({
 const registerTeacherSchema = z.object({
   name: z.string().trim().min(1, 'Teacher name is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+const loginTeacherSchema = z.object({
+  teacherId: uuidSchema,
+  password: z.string().min(1, 'Password is required'),
 });
 
 // Validation middleware factory
@@ -221,6 +249,30 @@ app.post('/api/teacher/register', registerLimiter, validateBody(registerTeacherS
 
     const token = jwt.sign({ teacherId }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ status: 'success', teacherId, token });
+  });
+});
+
+// Re-authenticates an existing teacherId (e.g. after the 7-day token expires, or after
+// a reinstall) so the client can resume syncing without minting a brand-new teacherId
+// and orphaning previously synced data.
+app.post('/api/teacher/login', loginLimiter, validateBody(loginTeacherSchema), (req, res) => {
+  const { teacherId, password } = req.validatedBody;
+
+  db.get('SELECT id, passwordHash FROM teachers WHERE id = ?', [teacherId], async (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to look up teacher' });
+    }
+    if (!row || !row.passwordHash) {
+      return res.status(401).json({ error: 'Invalid teacherId or password' });
+    }
+
+    const matches = await bcrypt.compare(password, row.passwordHash);
+    if (!matches) {
+      return res.status(401).json({ error: 'Invalid teacherId or password' });
+    }
+
+    const token = jwt.sign({ teacherId }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ status: 'success', teacherId, token });
   });
 });
 
