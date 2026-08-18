@@ -1,4 +1,4 @@
-import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, moveToRecovery, getWorkflows, getOrCreateAuthPassword } from './store.js';
+import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getOrCreateAuthPassword } from './store.js';
 import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 
 // Expose store globally so inline scripts in index.html still work without breaking
@@ -13,19 +13,25 @@ window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
 window.getWorkflows = getWorkflows;
 
 // Risk Computation Engine
-window.computeRisk = (student) => {
+export const computeRisk = (student) => {
   const attState = getAttState();
   const assessments = getAssessments();
   const submissions = getSubmissions();
+  const attendanceWindow = getAttendanceWindow(student, 14);
+  const absencesInWindow = attendanceWindow.filter((entry) => entry.status === 'A');
+
+  const isClusteredAbsencePattern = (entries) => {
+    if (entries.length < 3) return false;
+    const dates = entries
+      .map((entry) => new Date(`${entry.date}T00:00:00`))
+      .sort((a, b) => a.getTime() - b.getTime());
+    const start = dates[0].getTime();
+    const end = dates[dates.length - 1].getTime();
+    return (end - start) <= 7 * 24 * 60 * 60 * 1000;
+  };
 
   // 1. Attendance Risk
-  // Note: we only store current day's attendance in attState mapping for this prototype.
-  // To make it interesting, we'll assign pseudo-random risk if the user used fillMockData,
-  // or base it on mock metrics. But since we want dynamic, we'll look at the actual data.
-  // Actually, we need to track historical absences for the risk engine to be robust. 
-  // For V1, we'll use a deterministic hash of the student's name to generate fake historical data
-  // combined with their real current attendance/assessment data.
-  
+  // Use the FE-1 attendance log to compute a rolling 14-day absence pattern.
   let scoreSum = 0;
   let scoreCount = 0;
   let hwTotal = 0;
@@ -52,9 +58,16 @@ window.computeRisk = (student) => {
   let reasons = [];
   let tier = 'clear'; // clear, monitoring, flagged, critical
 
+  if (absencesInWindow.length >= 3) {
+    const clustered = isClusteredAbsencePattern(absencesInWindow);
+    reasons.push(`${absencesInWindow.length} absences in the last 14 days`);
+    reasons.push(clustered ? 'Clustered absence pattern' : 'Scattered absence pattern');
+    tier = 'critical';
+  }
+
   if (currentAtt === 'A') {
     reasons.push('Absent today');
-    tier = 'monitoring';
+    tier = tier === 'clear' ? 'monitoring' : tier;
   } else if (currentAtt === 'L') {
     reasons.push('Late today');
   }
@@ -79,6 +92,8 @@ window.computeRisk = (student) => {
 
   return { tier, reasons };
 };
+
+window.computeRisk = computeRisk;
 
 // Expose accessors
 window.getStoreStudents = getStudents;
@@ -497,16 +512,18 @@ window.syncLocalStateToBackend = function(key, val) {
   pushSync();
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  initApp();
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initApp();
 
-  // Register service worker for offline PWA support
-  // (Capacitor handles offline natively, so this is only for web/PWA installs)
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
-      console.log('Service worker registered:', reg.scope);
-    }).catch((err) => {
-      console.warn('Service worker registration failed:', err);
-    });
-  }
-});
+    // Register service worker for offline PWA support
+    // (Capacitor handles offline natively, so this is only for web/PWA installs)
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('Service worker registered:', reg.scope);
+      }).catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    }
+  });
+}

@@ -263,6 +263,7 @@ export const getAttendanceWindow = (student, days = 14) => {
   const dayEntries = Object.entries(records).sort((a, b) => a[0].localeCompare(b[0]));
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
+  cutoff.setHours(0, 0, 0, 0);
   const cutoffKey = cutoff.toISOString().slice(0, 10);
 
   return dayEntries

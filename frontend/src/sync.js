@@ -2,9 +2,9 @@
 import { getStore, saveStore, getSyncBlob, applySyncBlob } from './store.js';
 
 const PC_IP = '192.168.100.32';
-const hostname = window.location.hostname;
-const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1') 
-  ? `http://${PC_IP}:3000/api` 
+const hostname = (typeof window !== 'undefined' && window.location) ? window.location.hostname : 'localhost';
+const API_BASE = (hostname === 'localhost' || hostname === '127.0.0.1')
+  ? `http://${PC_IP}:3000/api`
   : `http://${hostname}:3000/api`;
 
 export const registerTeacher = async (name, password) => {

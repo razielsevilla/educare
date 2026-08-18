@@ -89,22 +89,22 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [store.js:44-52](frontend/src/store.js#L44) — `attState[student] = status` has no date key at all.
 **Problem:** Only the single most recent attendance mark per student is ever retained. Every rolling-window/velocity claim in the product docs (e.g. "3 absences in a 2-week window") is currently impossible to compute because no history is stored.
 **Acceptance Criteria:**
-- [ ] Attendance is stored per student **per date** (e.g. `attendanceLog[student][date] = status`), with `attState`-style "today's mark" derivable from it, not the source of truth.
-- [ ] A one-time migration converts any existing single-flag `attState` into the new structure (mapped to today's date) so current users don't lose their in-progress day's marks.
-- [ ] `getAttendance`/`updateAttendance` (and all call sites in `app.js`/`index.html`) are updated to the new shape; roll-call UI ([index.html:3841](frontend/index.html#L3841)) continues to work unchanged from the teacher's perspective.
-- [ ] A query helper exists to fetch "attendance records for student X in the last N days," proven by a unit test with seeded multi-date data.
-- [ ] Sync blob format (`getSyncBlob`/`applySyncBlob` in `store.js`, BE-7) is updated to carry the new structure without breaking merge logic.
+- [x] Attendance is stored per student **per date** (e.g. `attendanceLog[student][date] = status`), with `attState`-style "today's mark" derivable from it, not the source of truth.
+- [x] A one-time migration converts any existing single-flag `attState` into the new structure (mapped to today's date) so current users don't lose their in-progress day's marks.
+- [x] `getAttendance`/`updateAttendance` (and all call sites in `app.js`/`index.html`) are updated to the new shape; roll-call UI ([index.html:3841](frontend/index.html#L3841)) continues to work unchanged from the teacher's perspective.
+- [x] A query helper exists to fetch "attendance records for student X in the last N days," proven by a unit test with seeded multi-date data.
+- [x] Sync blob format (`getSyncBlob`/`applySyncBlob` in `store.js`, BE-7) is updated to carry the new structure without breaking merge logic.
 
 ### FE-2 — Implement real rolling-window / velocity detection in the risk engine
 **Priority:** P0 (depends on FE-1)
 **Found in:** [app.js:16-81](frontend/src/app.js#L16) — `computeRisk` only reads today's single attendance flag.
 **Problem:** The EWS engine markets pattern/velocity detection (README "Example flag triggers") but only checks the current day's snapshot.
 **Acceptance Criteria:**
-- [ ] `computeRisk` (or a successor function) flags a student when 3+ absences occur within any rolling 14-day window, using the FE-1 time-series data.
-- [ ] A "scattered vs. clustered" distinction exists per `pillars/discovery.md` intent (e.g. same-weekday absences vs. isolated illness-like clustering) — at minimum implemented as a documented heuristic, not aspirational text.
-- [ ] Each triggered reason string states the actual window/count that caused it (e.g. `"3 absences in the last 14 days"`), not a hardcoded phrase.
-- [ ] Unit tests cover: no flag under threshold, flag exactly at threshold, flag correctly scoped to the rolling window (an absence 20 days ago must not count toward a 14-day window).
-- [ ] Existing roster/dashboard rendering in `app.js`/`index.html` consumes the new reasons without further changes to the UI layer.
+- [x] `computeRisk` (or a successor function) flags a student when 3+ absences occur within any rolling 14-day window, using the FE-1 time-series data.
+- [x] A "scattered vs. clustered" distinction exists per `pillars/discovery.md` intent (e.g. same-weekday absences vs. isolated illness-like clustering) — at minimum implemented as a documented heuristic, not aspirational text.
+- [x] Each triggered reason string states the actual window/count that caused it (e.g. `"3 absences in the last 14 days"`), not a hardcoded phrase.
+- [x] Unit tests cover: no flag under threshold, flag exactly at threshold, flag correctly scoped to the rolling window (an absence 20 days ago must not count toward a 14-day window).
+- [x] Existing roster/dashboard rendering in `app.js`/`index.html` consumes the new reasons without further changes to the UI layer.
 
 ### FE-3 — Implement personal baseline + standard-deviation grade tracking
 **Priority:** P1 (depends on FE-2 patterns)
