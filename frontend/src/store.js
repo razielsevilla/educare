@@ -3,6 +3,67 @@ import { encryptSyncBlob, decryptSyncBlob, looksLikeEncryptedBlob } from './cryp
 
 const STORE_KEY = 'educare_local_state';
 
+const getDateKey = (date = new Date()) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized.toISOString().slice(0, 10);
+};
+
+const deriveCurrentAttendance = (attendanceLog = {}) => {
+  const todayKey = getDateKey();
+  const current = {};
+
+  Object.entries(attendanceLog || {}).forEach(([student, records]) => {
+    if (records && typeof records === 'object' && records[todayKey] !== undefined) {
+      current[student] = records[todayKey];
+    }
+  });
+
+  return current;
+};
+
+const normalizeAttendanceLog = (attendanceLog = {}) => {
+  const normalized = {};
+
+  Object.entries(attendanceLog || {}).forEach(([student, records]) => {
+    if (!records || typeof records !== 'object' || Array.isArray(records)) {
+      return;
+    }
+
+    normalized[student] = Object.fromEntries(
+      Object.entries(records).map(([dateKey, value]) => [dateKey, value])
+    );
+  });
+
+  return normalized;
+};
+
+const mergeAttendanceLogs = (baseLog = {}, remoteLog = {}) => {
+  const merged = { ...normalizeAttendanceLog(baseLog) };
+
+  Object.entries(normalizeAttendanceLog(remoteLog)).forEach(([student, records]) => {
+    merged[student] = { ...(merged[student] || {}), ...(records || {}) };
+  });
+
+  return merged;
+};
+
+const migrateLegacyAttendance = (state = {}) => {
+  const legacyLog = normalizeAttendanceLog(state.attendanceLog || {});
+  const legacyAttState = state.attState || {};
+  const todayKey = getDateKey();
+
+  if (Object.keys(legacyLog).length === 0 && Object.keys(legacyAttState).length > 0) {
+    Object.entries(legacyAttState).forEach(([student, value]) => {
+      legacyLog[student] = { [todayKey]: value };
+    });
+  }
+
+  state.attendanceLog = legacyLog;
+  state.attState = deriveCurrentAttendance(state.attendanceLog);
+  return state;
+};
+
 const defaultState = {
   teacherId: localStorage.getItem('educare_teacher_id') || '',
   teacherName: localStorage.getItem('educare_teacher_name') || '',
@@ -12,6 +73,7 @@ const defaultState = {
   currentClass: localStorage.getItem('educare_current_class') || '',
   lastSyncId: parseInt(localStorage.getItem('educare_last_sync_id') || '0', 10),
   students: [],
+  attendanceLog: {},
   attState: {},
   assessments: [],
   submissions: {},
@@ -36,6 +98,15 @@ const buildSyncMeta = (state = {}) => {
     attStateMeta[key] = { value, updatedAt };
   });
 
+  const attendanceLogMeta = {};
+  Object.entries(state.attendanceLog || {}).forEach(([student, records]) => {
+    attendanceLogMeta[student] = {};
+    Object.entries(records || {}).forEach(([dateKey, value]) => {
+      const updatedAt = normalizeTimestamp(state.syncMeta?.attendanceLog?.[student]?.[dateKey]?.updatedAt, Date.now());
+      attendanceLogMeta[student][dateKey] = { value, updatedAt };
+    });
+  });
+
   const assessScoresMeta = {};
   Object.entries(state.assessScores || {}).forEach(([key, value]) => {
     const updatedAt = normalizeTimestamp(state.syncMeta?.assessScores?.[key]?.updatedAt, Date.now());
@@ -51,6 +122,7 @@ const buildSyncMeta = (state = {}) => {
 
   return {
     attState: attStateMeta,
+    attendanceLog: attendanceLogMeta,
     assessScores: assessScoresMeta,
     workflows: workflowsMeta
   };
@@ -81,6 +153,8 @@ const mergeValueMaps = (localMap = {}, remoteMap = {}, localMeta = {}, remoteMet
 export const mergeSyncState = (localState = {}, remoteState = {}) => {
   const localAttState = localState.attState || {};
   const remoteAttState = remoteState.attState || {};
+  const localAttendanceLog = normalizeAttendanceLog(localState.attendanceLog || {});
+  const remoteAttendanceLog = normalizeAttendanceLog(remoteState.attendanceLog || {});
   const localAssessScores = localState.assessScores || {};
   const remoteAssessScores = remoteState.assessScores || {};
 
@@ -90,6 +164,20 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
     localState.syncMeta?.attState || {},
     remoteState.syncMeta?.attState || {}
   );
+
+  const mergedAttendanceLog = {};
+  const allStudents = new Set([...Object.keys(localAttendanceLog), ...Object.keys(remoteAttendanceLog)]);
+  allStudents.forEach((student) => {
+    const mergedRecords = mergeValueMaps(
+      localAttendanceLog[student] || {},
+      remoteAttendanceLog[student] || {},
+      localState.syncMeta?.attendanceLog?.[student] || {},
+      remoteState.syncMeta?.attendanceLog?.[student] || {}
+    );
+    if (Object.keys(mergedRecords).length > 0) {
+      mergedAttendanceLog[student] = mergedRecords;
+    }
+  });
 
   const mergedAssessScores = mergeValueMaps(
     localAssessScores,
@@ -119,16 +207,19 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
   const mergedState = {
     ...localState,
     ...remoteState,
+    attendanceLog: mergedAttendanceLog,
     attState: mergedAttState,
     assessScores: mergedAssessScores,
     workflows: mergedWorkflows,
     syncMeta: {
       attState: {},
+      attendanceLog: {},
       assessScores: {},
       workflows: {}
     }
   };
 
+  mergedState.attState = deriveCurrentAttendance(mergedAttendanceLog);
   mergedState.syncMeta = buildSyncMeta(mergedState);
   return mergedState;
 };
@@ -138,34 +229,54 @@ export const getStore = () => {
   const stored = localStorage.getItem(STORE_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      return migrateLegacyAttendance({ ...defaultState, ...parsed });
     } catch (e) {
       console.error('Failed to parse store', e);
-      return { ...defaultState };
+      return migrateLegacyAttendance({ ...defaultState });
     }
   }
-  return { ...defaultState };
+  return migrateLegacyAttendance({ ...defaultState });
 };
 
 export const saveStore = (state) => {
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
-  if (state.teacherId) localStorage.setItem('educare_teacher_id', state.teacherId);
-  if (state.teacherName) localStorage.setItem('educare_teacher_name', state.teacherName);
-  if (state.authToken) localStorage.setItem('educare_auth_token', state.authToken);
-  if (state.pin !== undefined) localStorage.setItem('educare_pin', state.pin);
-  if (state.currentClass !== undefined) localStorage.setItem('educare_current_class', state.currentClass);
-  if (state.classes) localStorage.setItem('educare_classes', JSON.stringify(state.classes));
-  localStorage.setItem('educare_last_sync_id', state.lastSyncId.toString());
+  const normalized = migrateLegacyAttendance({ ...defaultState, ...state });
+  localStorage.setItem(STORE_KEY, JSON.stringify(normalized));
+  if (normalized.teacherId) localStorage.setItem('educare_teacher_id', normalized.teacherId);
+  if (normalized.teacherName) localStorage.setItem('educare_teacher_name', normalized.teacherName);
+  if (normalized.authToken) localStorage.setItem('educare_auth_token', normalized.authToken);
+  if (normalized.pin !== undefined) localStorage.setItem('educare_pin', normalized.pin);
+  if (normalized.currentClass !== undefined) localStorage.setItem('educare_current_class', normalized.currentClass);
+  if (normalized.classes) localStorage.setItem('educare_classes', JSON.stringify(normalized.classes));
+  localStorage.setItem('educare_last_sync_id', String(normalized.lastSyncId ?? 0));
+  return normalized;
+};
+
+export const getAttendance = () => {
+  const state = getStore();
+  return state.attState || {};
+};
+
+export const getAttendanceWindow = (student, days = 14) => {
+  const state = getStore();
+  const records = state.attendanceLog?.[student] || {};
+  const dayEntries = Object.entries(records).sort((a, b) => a[0].localeCompare(b[0]));
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+
+  return dayEntries
+    .filter(([dateKey]) => dateKey >= cutoffKey)
+    .map(([dateKey, value]) => ({ date: dateKey, status: value }));
 };
 
 export const updateAttendance = (student, status) => {
   const state = getStore();
-  state.attState[student] = status;
+  state.attendanceLog = state.attendanceLog || {};
+  state.attendanceLog[student] = state.attendanceLog[student] || {};
+  state.attendanceLog[student][getDateKey()] = status;
+  state.attState = deriveCurrentAttendance(state.attendanceLog);
   saveStore(state);
-};
-
-export const getAttendance = () => {
-  return getStore().attState;
 };
 
 // Alias for getAttendance — used by app.js
@@ -253,6 +364,7 @@ export const getSyncBlob = async () => {
 
   const syncState = {
     attState: state.attState,
+    attendanceLog: state.attendanceLog,
     assessScores: state.assessScores,
     workflows: state.workflows,
     syncMeta: buildSyncMeta(state)
@@ -277,11 +389,13 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
     const remoteData = JSON.parse(decrypted);
     const mergedState = mergeSyncState(state, {
       attState: remoteData.attState || {},
+      attendanceLog: remoteData.attendanceLog || {},
       assessScores: remoteData.assessScores || {},
       workflows: remoteData.workflows || [],
       syncMeta: remoteData.syncMeta || buildSyncMeta(remoteData)
     });
 
+    state.attendanceLog = mergedState.attendanceLog;
     state.attState = mergedState.attState;
     state.assessScores = mergedState.assessScores;
     state.workflows = mergedState.workflows;
