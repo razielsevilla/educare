@@ -173,10 +173,16 @@ const migrateLegacyPinStorage = () => {
 
 migrateLegacyPinStorage();
 
+// Builds a local calendar-date key (YYYY-MM-DD). Deliberately avoids
+// Date#toISOString(), which converts to UTC — in any timezone ahead of UTC (e.g. the
+// Philippines, this app's target market, at UTC+8) that silently shifts local midnight
+// back onto the previous day's date string.
 const getDateKey = (date = new Date()) => {
   const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized.toISOString().slice(0, 10);
+  const year = normalized.getFullYear();
+  const month = String(normalized.getMonth() + 1).padStart(2, '0');
+  const day = String(normalized.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const deriveCurrentAttendance = (attendanceLog = {}) => {
@@ -514,9 +520,10 @@ export const getAttendanceWindow = (student, days = 14) => {
   const records = state.attendanceLog?.[student] || {};
   const dayEntries = Object.entries(records).sort((a, b) => a[0].localeCompare(b[0]));
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  cutoff.setHours(0, 0, 0, 0);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  // days=14 means the 14 calendar days ending today (today, today-1, ..., today-13),
+  // so the cutoff is today minus (days - 1), not today minus days.
+  cutoff.setDate(cutoff.getDate() - (days - 1));
+  const cutoffKey = getDateKey(cutoff);
 
   return dayEntries
     .filter(([dateKey]) => dateKey >= cutoffKey)
@@ -560,7 +567,8 @@ export const addStudent = (name, className) => {
   );
   if (!exists) {
     state.students.push({ name, class: cls });
-    state.attState[name] = 'P'; // Default attendance
+    state.attendanceLog = state.attendanceLog || {};
+    state.attendanceLog[name] = { ...(state.attendanceLog[name] || {}), [getDateKey()]: 'P' }; // Default attendance
     saveStore(state);
   }
 };

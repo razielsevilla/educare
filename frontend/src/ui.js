@@ -159,19 +159,22 @@ export const escapeHtml = (unsafe) => {
         data = { ...data, ...hardcoded, demoMode: true, studentName }; // merge but keep studentName
       }
 
+      const safeName = escapeHtml(studentName);
+      const safeFirstName = escapeHtml(studentName.split(' ')[0]);
+
       // Update Profile Screen
       const profileHero = document.querySelector('#screen-profile .profile-hero');
       if (profileHero) {
         profileHero.innerHTML = `
       <div class="avatar-ring ${data.color}" style="margin-top:16px;">
-        <div class="avatar avatar-lg">${data.initials}</div>
+        <div class="avatar avatar-lg">${escapeHtml(data.initials)}</div>
       </div>
-      <div class="profile-name">${studentName}</div>
-      <div class="profile-meta">${data.meta}</div>
-      <div style="margin-top:10px;"><span class="badge badge-${data.color}"><i class="ti ti-urgent"></i> ${data.statusText}</span></div>
+      <div class="profile-name">${safeName}</div>
+      <div class="profile-meta">${escapeHtml(data.meta)}</div>
+      <div style="margin-top:10px;"><span class="badge badge-${data.color}"><i class="ti ti-urgent"></i> ${escapeHtml(data.statusText)}</span></div>
       <div style="display:flex;gap:8px;margin-top:12px;">
         ${data.stats.map(s => `
-          <div class="stat-chip" style="min-width:72px;"><div class="num" style="color:${s.color};">${s.num}</div><div class="lbl">${s.lbl}</div></div>
+          <div class="stat-chip" style="min-width:72px;"><div class="num" style="color:${s.color};">${escapeHtml(s.num)}</div><div class="lbl">${escapeHtml(s.lbl)}</div></div>
         `).join('')}
       </div>
     `;
@@ -179,6 +182,9 @@ export const escapeHtml = (unsafe) => {
 
       const profInsights = document.getElementById('prof-insights');
       if (profInsights) profInsights.innerHTML = data.insightsHtml;
+
+      const profHistory = document.getElementById('tab-history');
+      if (profHistory) profHistory.innerHTML = renderProfileHistory(data);
 
       // Update Care Screen
       const topBarSub = document.querySelector('#screen-care .top-bar-sub');
@@ -188,7 +194,7 @@ export const escapeHtml = (unsafe) => {
       if (careStep1) {
         careStep1.innerHTML = `
       <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--deep-brown);margin-bottom:4px;">Triage Summary</div>
-      <div style="font-size:13px;color:var(--mid-brown);margin-bottom:14px;">Here's why ${studentName.split(' ')[0]} needs your attention right now.</div>
+      <div style="font-size:13px;color:var(--mid-brown);margin-bottom:14px;">Here's why ${safeFirstName} needs your attention right now.</div>
       ${data.triageHtml}
       ${data.insightsHtml}
       <button class="btn-primary" onclick="careStep(2)" style="margin-top:16px;">Choose care action <i class="ti ti-arrow-right"></i></button>
@@ -207,7 +213,7 @@ export const escapeHtml = (unsafe) => {
       if (careStep3) {
         careStep3.innerHTML = `
       <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--deep-brown);margin-bottom:4px;">Check-in guide</div>
-      <div style="font-size:13px;color:var(--mid-brown);margin-bottom:14px;">Suggested conversation prompts for your check-in with ${studentName.split(' ')[0]}. Use your judgment — these are guides, not scripts.</div>
+      <div style="font-size:13px;color:var(--mid-brown);margin-bottom:14px;">Suggested conversation prompts for your check-in with ${safeFirstName}. Use your judgment — these are guides, not scripts.</div>
       ${data.promptsHtml}
       <button class="btn-primary" onclick="careStep(4)">Log outcome <i class="ti ti-arrow-right"></i></button>
       <div style="height:8px;"></div>
@@ -220,6 +226,49 @@ export const escapeHtml = (unsafe) => {
       selectAction('ac1');
       careStep(1);
       navTo('screen-profile');
+    }
+
+    // Chronological log of past care interactions (FE-5) and behavior tags (FE-4) for
+    // this student, replacing the previously-hardcoded static timeline mock content.
+    function renderProfileHistory(data) {
+      const careEntries = (data.careInteractions || []).map((interaction) => ({
+        timestamp: interaction.timestamp,
+        title: `Care logged: ${escapeHtml(interaction.actionTaken || 'check-in')} — ${escapeHtml(interaction.outcomeSelected || '')}`,
+        sub: interaction.notes ? escapeHtml(interaction.notes) : 'No notes recorded.',
+        dot: interaction.outcomeSelected === 'worsening' ? 'red' : interaction.outcomeSelected === 'improving' ? 'green' : 'grey',
+        followUp: interaction.followUpDate
+      }));
+
+      const behaviorEntries = (data.behaviorLogs || []).map((log) => ({
+        timestamp: log.timestamp,
+        title: `Behavior tag: ${escapeHtml(log.tag)}`,
+        sub: 'Logged from the 1-tap behavior grid.',
+        dot: 'grey',
+        followUp: null
+      }));
+
+      const entries = [...careEntries, ...behaviorEntries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      if (entries.length === 0) {
+        return '<div style="font-size:12px;color:var(--mid-brown);margin-bottom:14px;font-weight:600;">Care history</div><div style="text-align:center; padding: 20px; color: var(--mid-brown); font-size: 13px;">No care interactions or behavior logs recorded yet.</div>';
+      }
+
+      const formatDate = (ts) => ts ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+      let html = '<div style="font-size:12px;color:var(--mid-brown);margin-bottom:14px;font-weight:600;">Care history</div>';
+      entries.forEach((entry) => {
+        const followUpNote = entry.followUp ? ` · Follow-up ${entry.followUp <= Date.now() ? 'due' : 'scheduled'} ${formatDate(entry.followUp)}` : '';
+        html += `
+          <div class="timeline-item">
+            <div class="timeline-dot ${entry.dot === 'green' || entry.dot === 'red' ? entry.dot : ''}"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">${entry.title}</div>
+              <div class="timeline-sub">${entry.sub}</div>
+              <div class="timeline-date">${formatDate(entry.timestamp)}${followUpNote}</div>
+            </div>
+          </div>`;
+      });
+      return html;
     }
     // ───────────────────────
 
@@ -354,6 +403,25 @@ export const escapeHtml = (unsafe) => {
     }
 
     // ── PIN ──
+    // A forgotten PIN has no recovery path (the local state is encrypted with a key
+    // derived from it — see resetForgottenPin in store.js) so this is destructive and
+    // requires explicit confirmation before wiping the encrypted blob.
+    function handleForgotPin() {
+      const confirmed = window.confirm(
+        'Forgetting your PIN wipes all locally stored student data on this device (it cannot be decrypted without it). ' +
+        'Continue?'
+      );
+      if (!confirmed) return;
+
+      if (window.resetForgottenPin) {
+        window.resetForgottenPin();
+      }
+      pinVal = '';
+      updatePinDots();
+      showToast('PIN reset. Set up a new PIN to continue.');
+      navTo('screen-setup');
+    }
+
     function formatLockDelay(ms) {
       const seconds = Math.max(1, Math.ceil(ms / 1000));
       return `${seconds}s`;
@@ -646,8 +714,8 @@ export const escapeHtml = (unsafe) => {
             </div>
           </div>
           <div class="card" style="padding: 40px 20px; text-align:center; margin-bottom: 30px; border: 2px solid var(--border-light);">
-            <div class="avatar avatar-lg" style="margin: 0 auto 20px; width: 80px; height: 80px; font-size: 32px; background: var(--amber-bg); color: var(--amber-deep);">${s.split(' ').map(x => x[0]).join('').slice(0, 2)}</div>
-            <div style="font-family:var(--serif); font-size:26px; font-weight:700; color:var(--deep-brown);">${s}</div>
+            <div class="avatar avatar-lg" style="margin: 0 auto 20px; width: 80px; height: 80px; font-size: 32px; background: var(--amber-bg); color: var(--amber-deep);">${escapeHtml(s.split(' ').map(x => x[0]).join('').slice(0, 2))}</div>
+            <div style="font-family:var(--serif); font-size:26px; font-weight:700; color:var(--deep-brown);">${escapeHtml(s)}</div>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
             <button class="btn-primary" style="height: 70px; font-size: 20px; background: var(--clear); border: none; font-weight:700;" onclick="recordAttendanceAndNext('P')">P <span style="font-size:12px; font-weight:500; display:block; margin-top:4px;">Present</span></button>
@@ -680,10 +748,10 @@ export const escapeHtml = (unsafe) => {
           html += absentStudents.map(s => `
             <div class="card" style="margin-bottom: 8px; padding: 12px 16px; display:flex; align-items:center; justify-content:space-between;">
               <div style="display:flex; align-items:center; gap: 12px;">
-                <div class="avatar avatar-sm" style="background: var(--critical-bg); color: var(--critical);">${s.split(' ').map(x => x[0]).join('').slice(0, 2)}</div>
-                <div style="font-size: 15px; font-weight: 600; color: var(--deep-brown);">${s}</div>
+                <div class="avatar avatar-sm" style="background: var(--critical-bg); color: var(--critical);">${escapeHtml(s.split(' ').map(x => x[0]).join('').slice(0, 2))}</div>
+                <div style="font-size: 15px; font-weight: 600; color: var(--deep-brown);">${escapeHtml(s)}</div>
               </div>
-              <button class="btn-sm" style="background: var(--amber-bg); color: var(--amber-deep); border: 1px solid rgba(212,130,10,0.3); font-weight: 700; padding: 6px 12px;" onclick="markLateFromSealed('${s}')">Mark Late</button>
+              <button class="btn-sm mark-late-btn" data-student="${escapeHtml(s)}" style="background: var(--amber-bg); color: var(--amber-deep); border: 1px solid rgba(212,130,10,0.3); font-weight: 700; padding: 6px 12px;">Mark Late</button>
             </div>
           `).join('');
         } else {
@@ -695,15 +763,18 @@ export const escapeHtml = (unsafe) => {
           html += lateStudents.map(s => `
             <div class="card" style="margin-bottom: 8px; padding: 12px 16px; display:flex; align-items:center; justify-content:space-between;">
               <div style="display:flex; align-items:center; gap: 12px;">
-                <div class="avatar avatar-sm" style="background: var(--amber-bg); color: var(--amber-deep);">${s.split(' ').map(x => x[0]).join('').slice(0, 2)}</div>
-                <div style="font-size: 15px; font-weight: 600; color: var(--deep-brown);">${s}</div>
+                <div class="avatar avatar-sm" style="background: var(--amber-bg); color: var(--amber-deep);">${escapeHtml(s.split(' ').map(x => x[0]).join('').slice(0, 2))}</div>
+                <div style="font-size: 15px; font-weight: 600; color: var(--deep-brown);">${escapeHtml(s)}</div>
               </div>
               <div style="font-size: 12px; font-weight: 700; color: var(--amber-deep); background: rgba(212,130,10,0.1); padding: 4px 8px; border-radius: 6px;">LATE</div>
             </div>
           `).join('');
         }
-        
+
         el.innerHTML = html + '<div style="height: 40px;"></div>';
+        el.querySelectorAll('.mark-late-btn').forEach((btn) => {
+          btn.addEventListener('click', () => markLateFromSealed(btn.dataset.student));
+        });
       }
     }
 
@@ -714,14 +785,12 @@ export const escapeHtml = (unsafe) => {
 
     function recordAttendanceAndNext(status) {
       const currentStudents = getStudents();
-      const currentAttState = getAttState();
       const s = currentStudents[attRollCallIndex];
-      
-      currentAttState[s] = status;
-      if (window.syncLocalStateToBackend) window.syncLocalStateToBackend('attState', currentAttState);
+
+      if (window.updateAttendance) window.updateAttendance(s, status);
 
       attRollCallIndex++;
-      
+
       if (attRollCallIndex >= currentStudents.length) {
         showToast('Roll call complete. Record sealed.');
       }
@@ -729,18 +798,15 @@ export const escapeHtml = (unsafe) => {
     }
 
     function markLateFromSealed(student) {
-      const currentAttState = getAttState();
-      currentAttState[student] = 'L';
-      if (window.syncLocalStateToBackend) window.syncLocalStateToBackend('attState', currentAttState);
-      
+      if (window.updateAttendance) window.updateAttendance(student, 'L');
+
       showToast(`${student.split(' ')[0]} marked as Late.`);
       renderAttWorkspace();
     }
 
     // ── ASSESSMENTS & HOMEWORK ──
-    // ── ASSESSMENTS & HOMEWORK ──
-    const getStoreAssessments = () => window.getStore ? (window.getStore().assessments || []) : [];
-    const getStoreSubmissions = () => window.getStore ? (window.getStore().submissions || {}) : {};
+    const getStoreAssessments = getAssessments;
+    const getStoreSubmissions = getSubmissions;
 
     let currentNewType = 'in-class';
     let activeAssessId = null;
@@ -847,22 +913,25 @@ export const escapeHtml = (unsafe) => {
           : `${gradedCount}/${getStudents().length} Graded`;
           
         return `
-          <div class="card" style="margin-bottom:12px; padding:16px; cursor:pointer;" onclick="openGradeView('${a.id}')">
+          <div class="card assessment-row" data-assess-id="${escapeHtml(a.id)}" style="margin-bottom:12px; padding:16px; cursor:pointer;">
             <div style="display:flex; align-items:flex-start; gap:12px;">
               <div style="width:40px; height:40px; border-radius:10px; background:var(--clear-bg); color:var(--clear); display:flex; align-items:center; justify-content:center;">
                 <i class="ti ${icon}" style="font-size:20px;"></i>
               </div>
               <div style="flex:1;">
-                <div style="font-size:16px; font-weight:700; color:var(--deep-brown); margin-bottom:4px;">${a.title}</div>
+                <div style="font-size:16px; font-weight:700; color:var(--deep-brown); margin-bottom:4px;">${escapeHtml(a.title)}</div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <div style="font-size:12px; color:var(--mid-brown);">Due: ${a.due}</div>
-                  <div style="font-size:11px; font-weight:600; color:var(--amber-deep); background:rgba(212,130,10,0.1); padding:2px 8px; border-radius:4px;">${progressStr}</div>
+                  <div style="font-size:12px; color:var(--mid-brown);">Due: ${escapeHtml(a.due)}</div>
+                  <div style="font-size:11px; font-weight:600; color:var(--amber-deep); background:rgba(212,130,10,0.1); padding:2px 8px; border-radius:4px;">${escapeHtml(progressStr)}</div>
                 </div>
               </div>
             </div>
           </div>
         `;
       }).join('');
+      el.querySelectorAll('.assessment-row').forEach((row) => {
+        row.addEventListener('click', () => openGradeView(row.dataset.assessId));
+      });
     }
 
     function openGradeView(id) {
@@ -912,38 +981,44 @@ export const escapeHtml = (unsafe) => {
         const sub = submissions[activeAssessId][s];
         
         html += `<div style="padding:12px 0; border-bottom:1px solid var(--border-light); display:flex; align-items:center; gap:12px;">`;
-        html += `<div class="avatar avatar-sm">${s.split(' ').map(x => x[0]).join('').slice(0, 2)}</div>`;
+        html += `<div class="avatar avatar-sm">${escapeHtml(s.split(' ').map(x => x[0]).join('').slice(0, 2))}</div>`;
         html += `<div style="flex:1;">
-                   <div style="font-size:15px; font-weight:600; color:var(--deep-brown);">${s}</div>`;
-                   
+                   <div style="font-size:15px; font-weight:600; color:var(--deep-brown);">${escapeHtml(s)}</div>`;
+
         if (a.type === 'take-home') {
           if (sub.submitted) {
-             html += `<div style="font-size:11px; color:var(--clear); margin-top:2px;">Submitted ${sub.date}</div>`;
+             html += `<div style="font-size:11px; color:var(--clear); margin-top:2px;">Submitted ${escapeHtml(sub.date)}</div>`;
           } else {
              html += `<div style="font-size:11px; color:var(--critical); margin-top:2px;">Missing</div>`;
           }
         }
-        
+
         html += `</div>`; // end flex:1
-        
+
         if (a.type === 'take-home') {
-          html += `<div style="width:40px; height:40px; border-radius:8px; border:2px solid ${sub.submitted ? 'var(--clear)' : 'var(--border)'}; background:${sub.submitted ? 'var(--clear-bg)' : 'transparent'}; color:var(--clear); display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="window.toggleSubmission('${s}')">
+          html += `<div class="toggle-submission-btn" data-student="${escapeHtml(s)}" style="width:40px; height:40px; border-radius:8px; border:2px solid ${sub.submitted ? 'var(--clear)' : 'var(--border)'}; background:${sub.submitted ? 'var(--clear-bg)' : 'transparent'}; color:var(--clear); display:flex; align-items:center; justify-content:center; cursor:pointer;">
                      ${sub.submitted ? '<i class="ti ti-check" style="font-size:20px;"></i>' : ''}
                    </div>`;
         }
-        
+
         if (a.type === 'in-class' || sub.submitted) {
           html += `<div style="display:flex; align-items:center; gap:6px;">
-                     <input class="score-input" value="${sub.score || ''}" type="number" min="0" max="${a.maxScore}" onchange="window.updateScore('${s}', this.value)" placeholder="-">
+                     <input class="score-input update-score-input" data-student="${escapeHtml(s)}" value="${escapeHtml(sub.score || '')}" type="number" min="0" max="${a.maxScore}" placeholder="-">
                      <span style="font-size:12px; color:var(--mid-brown);">/ ${a.maxScore}</span>
                    </div>`;
         }
-        
+
         html += `</div>`;
       });
-      
+
       html += `</div>`;
       el.innerHTML = html;
+      el.querySelectorAll('.toggle-submission-btn').forEach((btn) => {
+        btn.addEventListener('click', () => window.toggleSubmission(btn.dataset.student));
+      });
+      el.querySelectorAll('.update-score-input').forEach((input) => {
+        input.addEventListener('change', () => window.updateScore(input.dataset.student, input.value));
+      });
     }
 
     function saveGrades() {
@@ -1102,12 +1177,15 @@ export const escapeHtml = (unsafe) => {
         const initials = s.split(' ').map(x => x[0]).join('').slice(0, 2);
         const firstName = s.split(' ')[0];
         return `
-          <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" onclick="openBehaviorSheet('${s}')">
-            <div class="avatar avatar-md" style="background:var(--card-bg); border:1px solid var(--border-light);">${initials}</div>
-            <div style="font-size:11px; font-weight:600; color:var(--deep-brown); text-align:center;">${firstName}</div>
+          <div class="behavior-grid-item" data-student="${escapeHtml(s)}" style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+            <div class="avatar avatar-md" style="background:var(--card-bg); border:1px solid var(--border-light);">${escapeHtml(initials)}</div>
+            <div style="font-size:11px; font-weight:600; color:var(--deep-brown); text-align:center;">${escapeHtml(firstName)}</div>
           </div>
         `;
       }).join('');
+      el.querySelectorAll('.behavior-grid-item').forEach((item) => {
+        item.addEventListener('click', () => openBehaviorSheet(item.dataset.student));
+      });
     }
 
     function openBehaviorSheet(student) {
@@ -1284,10 +1362,9 @@ export const escapeHtml = (unsafe) => {
             advisoryClasses.forEach(c => {
               const isSelected = currentClass.name === c.name;
               html += `
-                <div class="card class-option" style="margin-bottom:12px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;"
-                  onclick="selectClass('${c.name}', true, this)">
+                <div class="card class-option" data-class-name="${escapeHtml(c.name)}" data-is-advisory="true" style="margin-bottom:12px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;">
                   <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
-                    <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${c.name}</div>
+                    <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${escapeHtml(c.name)}</div>
                     <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${isSelected ? 'block' : 'none'};"></i>
                   </div>
                 </div>`;
@@ -1299,11 +1376,10 @@ export const escapeHtml = (unsafe) => {
             subjectClasses.forEach(c => {
               const isSelected = currentClass.name === c.name;
               html += `
-                <div class="card class-option" style="margin-bottom:8px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;"
-                  onclick="selectClass('${c.name}', false, this)">
+                <div class="card class-option" data-class-name="${escapeHtml(c.name)}" data-is-advisory="false" style="margin-bottom:8px;border:1.5px solid ${isSelected ? 'var(--amber)' : 'transparent'};cursor:pointer;">
                   <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
                     <div>
-                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${c.name}</div>
+                      <div style="font-size:14px;font-weight:700;color:var(--deep-brown);">${escapeHtml(c.name)}</div>
                       <div style="font-size:12px;color:var(--mid-brown);">Subject Class</div>
                     </div>
                     <i class="ti ti-check class-check" style="color:var(--amber);font-size:18px;display:${isSelected ? 'block' : 'none'};"></i>
@@ -1312,6 +1388,11 @@ export const escapeHtml = (unsafe) => {
             });
           }
           container.innerHTML = html;
+          container.querySelectorAll('.class-option').forEach((el) => {
+            el.addEventListener('click', () => {
+              selectClass(el.dataset.className, el.dataset.isAdvisory === 'true', el);
+            });
+          });
         }
 
         // Add inline add-class form at the bottom of the switcher modal if not already present
@@ -1497,6 +1578,7 @@ window.refreshBiometricButton = refreshBiometricButton;
 window.handleBiometricUnlock = handleBiometricUnlock;
 window.pinPress = pinPress;
 window.pinDel = pinDel;
+window.handleForgotPin = handleForgotPin;
 window.updatePinDots = updatePinDots;
 window.openAddStudentModal = openAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;

@@ -36,14 +36,16 @@ const ensureCrypto = () => {
   }
 };
 
-// Mirrors store.js's private getDateKey() (local-midnight normalized, then
-// toISOString().slice(0,10)) so date keys built here line up with what
-// migrateLegacyAttendance/deriveCurrentAttendance recompute internally,
-// regardless of the host timezone.
+// Mirrors store.js's private getDateKey() (local calendar Y-M-D — deliberately NOT
+// toISOString(), which converts to UTC and would shift the date in timezones ahead of
+// UTC) so date keys built here line up with what migrateLegacyAttendance/
+// deriveCurrentAttendance recompute internally, regardless of the host timezone.
 const getAppDateKey = (date = new Date()) => {
   const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized.toISOString().slice(0, 10);
+  const year = normalized.getFullYear();
+  const month = String(normalized.getMonth() + 1).padStart(2, '0');
+  const day = String(normalized.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 describe('FE-8 client-side encryption round-trip', () => {

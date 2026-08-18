@@ -89,5 +89,39 @@ describe('personal baseline risk detection', () => {
 
     const risk = computeRisk('Sam');
     expect(risk.reasons.some((reason) => reason.includes('baseline'))).toBe(false);
+    // Sam has enough history to establish a personal baseline, so the flat absolute
+    // thresholds (which would otherwise flag any ~60% average as critical) must not
+    // apply — only a deviation from Sam's OWN baseline should be able to flag Sam.
+    expect(risk.tier).toBe('clear');
+  });
+
+  it('falls back to the flat absolute threshold for a student with insufficient history for a baseline', async () => {
+    const { computeRisk } = await import('../src/app.js');
+
+    localStorage.setItem('educare_local_state', JSON.stringify({
+      teacherId: 'teacher-1',
+      teacherName: 'Ada',
+      pin: '1234',
+      students: ['Riley'],
+      attendanceLog: { Riley: { '2026-08-01': 'P', '2026-08-02': 'P' } },
+      attState: { Riley: 'P' },
+      // Only 2 in-class scores — below the 4-prior-sample minimum needed to trust a
+      // personal baseline, so the flat threshold fallback should still apply.
+      assessments: [
+        { id: 'c1', type: 'in-class', maxScore: 100 },
+        { id: 'c2', type: 'in-class', maxScore: 100 }
+      ],
+      submissions: {
+        c1: { Riley: { score: 60 } },
+        c2: { Riley: { score: 62 } }
+      },
+      assessScores: {},
+      workflows: [],
+      syncMeta: { attState: {}, attendanceLog: {}, assessScores: {}, workflows: {} }
+    }));
+
+    const risk = computeRisk('Riley');
+    expect(risk.tier).toBe('critical');
+    expect(risk.reasons.some((reason) => reason.includes('Low average score'))).toBe(true);
   });
 });

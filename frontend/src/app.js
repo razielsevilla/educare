@@ -1,5 +1,5 @@
 import './ui.js';
-import { getStore, saveStore, addStudent, addClass, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword, setupSecurityPin, verifySecurityPin, getPinLockStatus, hasSecurityPinConfigured, hasSessionPin, clearSessionPin, resetForgottenPin } from './store.js';
+import { getStore, saveStore, addStudent, addClass, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, updateAttendance, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword, setupSecurityPin, verifySecurityPin, getPinLockStatus, hasSecurityPinConfigured, hasSessionPin, clearSessionPin, resetForgottenPin } from './store.js';
 import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 import { escapeHtml } from './ui.js';
 
@@ -42,6 +42,7 @@ window.saveStore = saveStore;
 window.pushSync = () => { pushSync(); if(window.renderDynamicScreens) window.renderDynamicScreens(); };
 window.addStudent = (name, className) => { addStudent(name, className); window.pushSync(); };
 window.addClass = (className, isAdvisory) => { addClass(className, isAdvisory); window.pushSync(); };
+window.updateAttendance = (student, status) => { updateAttendance(student, status); window.pushSync(); };
 window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
 window.addBehaviorLog = (student, tag, timestamp) => {
   const log = addBehaviorLog(student, tag, timestamp);
@@ -170,14 +171,21 @@ export const computeRisk = (student) => {
     return (end - start) <= 7 * 24 * 60 * 60 * 1000;
   };
 
+  // Sorted oldest-to-newest by due date where available, so "the latest score" below means
+  // chronologically latest, not just whatever position it happens to sit at in the
+  // assessments array (new assessments are unshifted to the front, not appended).
   const historyScores = assessments
     .map((assessment) => {
       const sub = submissions[assessment.id]?.[student];
       if (!sub || sub.score === null || sub.score === '' || sub.score === undefined) return null;
       if (assessment.type !== 'in-class') return null;
-      return (Number(sub.score) / Number(assessment.maxScore || 1)) * 100;
+      const score = (Number(sub.score) / Number(assessment.maxScore || 1)) * 100;
+      if (!Number.isFinite(score)) return null;
+      return { score, due: assessment.due || null };
     })
-    .filter((score) => score !== null && Number.isFinite(score));
+    .filter((entry) => entry !== null)
+    .sort((a, b) => (a.due && b.due ? a.due.localeCompare(b.due) : 0))
+    .map((entry) => entry.score);
 
   const computeStdDev = (values) => {
     if (values.length === 0) return 0;
@@ -186,10 +194,17 @@ export const computeRisk = (student) => {
     return Math.sqrt(variance);
   };
 
+  // Baseline is computed from the student's own PRIOR scores (excluding the score being
+  // tested), so a real anomaly can't pollute the average it's being compared against.
+  // A minimum of 4 prior in-class scores is required before a baseline is trusted; below
+  // that, computeRisk falls back to the flat absolute thresholds further down.
+  const MIN_BASELINE_SAMPLES = 4;
   const latestScore = historyScores.length > 0 ? historyScores[historyScores.length - 1] : null;
-  const baselineMean = historyScores.length > 0 ? historyScores.reduce((sum, score) => sum + score, 0) / historyScores.length : null;
-  const baselineStdDev = historyScores.length > 0 ? computeStdDev(historyScores) : 0;
-  const baselineWarning = historyScores.length >= 4 && latestScore !== null && baselineMean !== null && baselineStdDev > 0
+  const priorScores = historyScores.slice(0, -1);
+  const hasBaseline = priorScores.length >= MIN_BASELINE_SAMPLES;
+  const baselineMean = hasBaseline ? priorScores.reduce((sum, score) => sum + score, 0) / priorScores.length : null;
+  const baselineStdDev = hasBaseline ? computeStdDev(priorScores) : 0;
+  const baselineWarning = hasBaseline && latestScore !== null && baselineStdDev > 0
     ? latestScore < baselineMean - (1.5 * baselineStdDev)
     : false;
 
@@ -255,12 +270,17 @@ export const computeRisk = (student) => {
     tier = 'monitoring';
   }
 
-  if (avgScore < 75) {
-    reasons.push(`Low average score (${Math.round(avgScore)}%)`);
-    tier = 'critical';
-  } else if (avgScore < 85) {
-    reasons.push(`Declining score (${Math.round(avgScore)}%)`);
-    tier = tier === 'clear' ? 'flagged' : tier;
+  // Flat absolute thresholds only apply as a fallback when there isn't enough history to
+  // establish a personal baseline above — otherwise a chronically low (but stable) scorer
+  // and a high performer having one bad day would be judged by the exact same bar.
+  if (!hasBaseline) {
+    if (avgScore < 75) {
+      reasons.push(`Low average score (${Math.round(avgScore)}%)`);
+      tier = 'critical';
+    } else if (avgScore < 85) {
+      reasons.push(`Declining score (${Math.round(avgScore)}%)`);
+      tier = tier === 'clear' ? 'flagged' : tier;
+    }
   }
 
   if (hwTotal > 0) {
@@ -425,12 +445,6 @@ export const generateStudentProfileData = (studentName) => {
 };
 
 window.generateStudentProfileData = generateStudentProfileData;
-
-// Expose accessors
-window.getStoreStudents = getStudents;
-window.getStoreAssessments = getAssessments;
-window.getStoreSubmissions = getSubmissions;
-window.getStoreAttState = getAttState;
 
 window.setRosterFilter = function(filterVal, btnEl) {
   currentRosterFilter = filterVal;
@@ -734,6 +748,31 @@ window.renderDynamicScreens = () => {
   const responseContainer = document.getElementById('responseContainer');
   if (responseContainer) {
     let html = '';
+    const dueFollowUps = getCareInteractionsDue();
+    if (dueFollowUps.length > 0) {
+      html += `
+        <div style="margin:16px 20px 0;">
+          <div style="font-size:13px;font-weight:700;color:var(--mid-brown);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">
+            Follow-ups Due &middot; ${dueFollowUps.length}
+          </div>
+          <div class="card">`;
+      dueFollowUps.forEach((interaction) => {
+        const initials = (interaction.student || '').split(' ').map(x => x[0]).join('').slice(0, 2);
+        const dueDate = new Date(interaction.followUpDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        html += `
+            <div class="student-row" data-action="openProfile" data-student="${escapeHtml(interaction.student)}">
+              <div class="avatar-ring monitoring">
+                <div class="avatar avatar-md">${escapeHtml(initials)}</div>
+              </div>
+              <div class="student-info">
+                <div class="student-name">${escapeHtml(interaction.student)}</div>
+                <div class="student-meta">Prior: ${escapeHtml(interaction.actionTaken)} — ${escapeHtml(interaction.outcomeSelected)} · Due ${escapeHtml(dueDate)}</div>
+              </div>
+              <i class="ti ti-chevron-right" style="color:var(--neutral-400);font-size:18px;"></i>
+            </div>`;
+      });
+      html += `</div></div>`;
+    }
     if (critical.length > 0) {
       html += `
         <div style="margin:16px 20px 0;">
@@ -755,13 +794,18 @@ window.renderDynamicScreens = () => {
             </div>`;
       });
       html += `</div></div>`;
-    } else {
+    } else if (dueFollowUps.length === 0) {
         html = '<div style="text-align:center; padding:30px; color:var(--mid-brown); font-size:14px;">No active workflows.</div>';
     }
     responseContainer.innerHTML = html;
     responseContainer.querySelectorAll('[data-action="navToCare"]').forEach(el => {
       el.addEventListener('click', function() {
         if (window.navTo) window.navTo('screen-care');
+      });
+    });
+    responseContainer.querySelectorAll('[data-action="openProfile"]').forEach(el => {
+      el.addEventListener('click', function() {
+        if (window.openProfile) window.openProfile(this.dataset.student);
       });
     });
   }
@@ -842,9 +886,7 @@ async function initApp() {
 // Called from index.html inline scripts for attendance, assessments, submissions
 window.syncLocalStateToBackend = function(key, val) {
   const state = getStore();
-  if (key === 'attState') {
-    state.attState = val;
-  } else if (key === 'assessments') {
+  if (key === 'assessments') {
     state.assessments = val;
   } else if (key === 'submissions') {
     state.submissions = val;

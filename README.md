@@ -230,6 +230,10 @@ The system knows where it is in the school year relative to configured quarter b
 - All student data encrypted on-device before sync
 - Sync payloads are encrypted with AES-GCM using a key derived from the teacher PIN/passphrase via PBKDF2
 - App locked via PIN or biometric authentication
+- Repeated wrong-PIN attempts trigger an increasing lockout delay; the real cryptographic
+  barrier is the PBKDF2-derived encryption key itself, since the lockout counter (like all
+  client-only state) can't be made tamper-proof against someone with local device/devtools
+  access — see [frontend/src/store.js](frontend/src/store.js)
 - No student data transmitted to third parties
 - Data sync is opt-in and scoped to backup only
 
@@ -246,7 +250,7 @@ EduCare is built on a **local-first data model**. The application is fully funct
 
 | Layer | Approach |
 |---|---|
-| **Local storage** | SQLite on-device database |
+| **Local storage** | Encrypted JSON state blob in browser `localStorage` (AES-256 via a PBKDF2-derived key from the teacher's PIN) |
 | **EWS logic** | Runs locally — lightweight rule-based engine viable on mid-range Android |
 | **Sync** | Background sync to cloud backup when connectivity is detected |
 | **Conflict resolution** | Last-write-wins with timestamp-based conflict handling for multi-device edge cases |

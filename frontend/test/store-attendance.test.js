@@ -80,4 +80,95 @@ describe('attendance history model', () => {
     expect(windowed.map((item) => item.date)).toContain(keyOld);
     expect(windowed.some((item) => item.date === keyOld2)).toBe(false);
   });
+
+  it('includes exactly the last N calendar days (inclusive of today), not N+1', async () => {
+    const { saveStore, getAttendanceWindow } = await import('../src/store.js');
+
+    // Local Y-M-D key, matching store.js's getDateKey — deliberately NOT
+    // toISOString(), which converts to UTC and shifts the date in timezones ahead of
+    // UTC (this suite runs in Asia/Manila, UTC+8).
+    const localKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const today = new Date();
+    const log = {};
+    // 15 distinct days: today back through today-14.
+    for (let i = 0; i <= 14; i += 1) {
+      const key = localKey(new Date(today.getTime() - i * 24 * 60 * 60 * 1000));
+      log[key] = 'P';
+    }
+
+    saveStore({
+      teacherId: 'teacher-1',
+      students: ['Eli'],
+      attendanceLog: { Eli: log },
+      attState: {},
+      assessments: [],
+      submissions: {},
+      workflows: [],
+      syncMeta: { attState: {}, assessScores: {}, workflows: {} }
+    });
+
+    const windowed = getAttendanceWindow('Eli', 14);
+    // days=14 should return the 14 days ending today (today, today-1, ..., today-13) —
+    // today-14 falls just outside that window.
+    expect(windowed.length).toBe(14);
+    const oldestIncluded = localKey(new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000));
+    const excluded = localKey(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000));
+    expect(windowed.map((item) => item.date)).toContain(oldestIncluded);
+    expect(windowed.some((item) => item.date === excluded)).toBe(false);
+  });
+
+  it('does not discard an earlier roll-call mark when a later student is marked the same day (FE-1 regression)', async () => {
+    const { getStore, updateAttendance } = await import('../src/store.js');
+
+    localStorage.setItem('educare_local_state', JSON.stringify({
+      teacherId: 'teacher-1',
+      students: ['Alice', 'Bob'],
+      attendanceLog: {},
+      attState: {},
+      assessments: [],
+      submissions: {},
+      workflows: [],
+      syncMeta: { attState: {}, assessScores: {}, workflows: {} }
+    }));
+
+    // Simulate a roll call: mark Alice absent, then Bob present, as two independent
+    // sequential writes (mirroring the real UI recording one student at a time).
+    updateAttendance('Alice', 'A');
+    updateAttendance('Bob', 'P');
+
+    const store = getStore();
+    expect(store.attState.Alice).toBe('A');
+    expect(store.attState.Bob).toBe('P');
+  });
+
+  it('keeps a new student\'s default present mark after a subsequent save (FE-1 regression)', async () => {
+    const { getStore, addStudent, updateAttendance } = await import('../src/store.js');
+
+    localStorage.setItem('educare_local_state', JSON.stringify({
+      teacherId: 'teacher-1',
+      students: [],
+      classes: [{ name: 'Grade 5', isAdvisory: true }],
+      currentClass: 'Grade 5',
+      attendanceLog: { Existing: { '2026-01-01': 'P' } },
+      attState: {},
+      assessments: [],
+      submissions: {},
+      workflows: [],
+      syncMeta: { attState: {}, assessScores: {}, workflows: {} }
+    }));
+
+    addStudent('Nina', 'Grade 5');
+    // A second, unrelated write to the store (as would happen elsewhere in the app)
+    // must not wipe out Nina's default attendance mark from the day she was added.
+    updateAttendance('Nina', 'P');
+
+    const store = getStore();
+    expect(store.attState.Nina).toBe('P');
+  });
 });
