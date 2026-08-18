@@ -65,20 +65,20 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [package.json:8](backend/package.json#L8) — `"test": "echo \"Error: no test specified\" && exit 1"`
 **Problem:** There are no tests. `npm test` is a stub that always fails.
 **Acceptance Criteria:**
-- [ ] A test runner (e.g. `vitest` or `jest` + `supertest`) is installed and `npm test` runs it.
-- [ ] Integration tests exist for all four routes (`/health`, `/api/sync/push`, `/api/sync/pull`, `/api/teacher/register`) covering both success and validation-failure paths.
-- [ ] Tests run against an isolated/in-memory SQLite DB, not `backend/educare.db`.
-- [ ] `npm test` exits `0` on a clean run and is safe to wire into CI.
+- [x] A test runner (e.g. `vitest` or `jest` + `supertest`) is installed and `npm test` runs it.
+- [x] Integration tests exist for all four routes (`/health`, `/api/sync/push`, `/api/sync/pull`, `/api/teacher/register`) covering both success and validation-failure paths.
+- [x] Tests run against an isolated/in-memory SQLite DB, not `backend/educare.db`.
+- [x] `npm test` exits `0` on a clean run and is safe to wire into CI.
 
 ### BE-7 — Replace blind last-write-wins sync with a real merge/versioning strategy
 **Priority:** P2
 **Found in:** [sync.js:56-75](frontend/src/sync.js#L56) (`pullSync` applies only the single latest blob), [store.js:137-150](frontend/src/store.js#L137) (`applySyncBlob` shallow-merges two fields and outright overwrites `workflows`)
 **Problem:** Two devices syncing the same teacher's data will silently clobber each other's changes — there is no per-field merge, no timestamp comparison, no conflict surfacing to the user. This will actively lose data as soon as more than one device is used, which the product's own "Future Directions" (multi-teacher sync) assumes will happen.
 **Acceptance Criteria:**
-- [ ] Sync payloads carry enough metadata (per-record timestamps or a version vector) to merge concurrent edits at the field/record level, not just take-the-latest-whole-blob.
-- [ ] `workflows` entries are merged/deduped by student+id rather than replaced wholesale.
-- [ ] A documented, tested scenario exists: two "devices" push different changes to different students between the same two sync cycles, and both changes survive after both devices pull.
-- [ ] Any genuine conflict (same field, same record, edited on both sides) is either resolved by an explicit deterministic rule (documented) or surfaced to the user rather than silently dropped.
+- [x] Sync payloads carry enough metadata (per-record timestamps or a version vector) to merge concurrent edits at the field/record level, not just take-the-latest-whole-blob.
+- [x] `workflows` entries are merged/deduped by student+id rather than replaced wholesale.
+- [x] A documented, tested scenario exists: two "devices" push different changes to different students between the same two sync cycles, and both changes survive after both devices pull.
+- [x] Any genuine conflict (same field, same record, edited on both sides) is either resolved by an explicit deterministic rule (documented) or surfaced to the user rather than silently dropped.
 
 ---
 

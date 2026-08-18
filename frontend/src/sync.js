@@ -71,8 +71,12 @@ export const pullSync = async () => {
     });
     const data = await res.json();
     if (data.status === 'success' && data.data && data.data.length > 0) {
-      const latestBlob = data.data[data.data.length - 1];
-      const updated = await applySyncBlob(latestBlob.blobData, latestBlob.id);
+      let updated = false;
+      for (const row of data.data) {
+        const applied = await applySyncBlob(row.blobData, row.id);
+        updated = updated || applied;
+      }
+
       if (updated) {
         console.log('Successfully pulled remote changes.');
       }

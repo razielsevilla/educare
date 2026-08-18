@@ -16,7 +16,121 @@ const defaultState = {
   assessments: [],
   submissions: {},
   assessScores: {},
-  workflows: []
+  workflows: [],
+  syncMeta: {
+    attState: {},
+    assessScores: {},
+    workflows: {}
+  }
+};
+
+const normalizeTimestamp = (value, fallback = Date.now()) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const buildSyncMeta = (state = {}) => {
+  const attStateMeta = {};
+  Object.entries(state.attState || {}).forEach(([key, value]) => {
+    const updatedAt = normalizeTimestamp(state.syncMeta?.attState?.[key]?.updatedAt, Date.now());
+    attStateMeta[key] = { value, updatedAt };
+  });
+
+  const assessScoresMeta = {};
+  Object.entries(state.assessScores || {}).forEach(([key, value]) => {
+    const updatedAt = normalizeTimestamp(state.syncMeta?.assessScores?.[key]?.updatedAt, Date.now());
+    assessScoresMeta[key] = { value, updatedAt };
+  });
+
+  const workflowsMeta = {};
+  (state.workflows || []).forEach((workflow) => {
+    const workflowId = workflow.id || `${workflow.student || 'unknown'}:${workflow.stage || 'stage'}:${normalizeTimestamp(workflow.updatedAt ?? workflow.timestamp, Date.now())}`;
+    const updatedAt = normalizeTimestamp(workflow.updatedAt ?? workflow.timestamp, Date.now());
+    workflowsMeta[workflowId] = { updatedAt };
+  });
+
+  return {
+    attState: attStateMeta,
+    assessScores: assessScoresMeta,
+    workflows: workflowsMeta
+  };
+};
+
+const mergeValueMaps = (localMap = {}, remoteMap = {}, localMeta = {}, remoteMeta = {}) => {
+  const merged = { ...localMap };
+  const allKeys = new Set([...Object.keys(localMap), ...Object.keys(remoteMap)]);
+
+  allKeys.forEach((key) => {
+    const localValue = localMap[key];
+    const remoteValue = remoteMap[key];
+    const localUpdatedAt = normalizeTimestamp(localMeta[key]?.updatedAt, 0);
+    const remoteUpdatedAt = normalizeTimestamp(remoteMeta[key]?.updatedAt, 0);
+
+    if (remoteValue !== undefined && (remoteUpdatedAt > localUpdatedAt || (localValue === undefined && remoteValue !== undefined))) {
+      merged[key] = remoteValue;
+    } else if (localValue !== undefined) {
+      merged[key] = localValue;
+    } else if (remoteValue !== undefined) {
+      merged[key] = remoteValue;
+    }
+  });
+
+  return merged;
+};
+
+export const mergeSyncState = (localState = {}, remoteState = {}) => {
+  const localAttState = localState.attState || {};
+  const remoteAttState = remoteState.attState || {};
+  const localAssessScores = localState.assessScores || {};
+  const remoteAssessScores = remoteState.assessScores || {};
+
+  const mergedAttState = mergeValueMaps(
+    localAttState,
+    remoteAttState,
+    localState.syncMeta?.attState || {},
+    remoteState.syncMeta?.attState || {}
+  );
+
+  const mergedAssessScores = mergeValueMaps(
+    localAssessScores,
+    remoteAssessScores,
+    localState.syncMeta?.assessScores || {},
+    remoteState.syncMeta?.assessScores || {}
+  );
+
+  const workflowMap = new Map();
+  [...(localState.workflows || []), ...(remoteState.workflows || [])].forEach((workflow) => {
+    if (!workflow) return;
+
+    const workflowId = workflow.id || `${workflow.student || 'unknown'}:${workflow.stage || 'stage'}:${normalizeTimestamp(workflow.updatedAt ?? workflow.timestamp, Date.now())}`;
+    const nextWorkflow = {
+      ...workflow,
+      id: workflowId,
+      updatedAt: normalizeTimestamp(workflow.updatedAt ?? workflow.timestamp, Date.now())
+    };
+
+    const existing = workflowMap.get(workflowId);
+    if (!existing || nextWorkflow.updatedAt >= existing.updatedAt) {
+      workflowMap.set(workflowId, nextWorkflow);
+    }
+  });
+
+  const mergedWorkflows = [...workflowMap.values()].sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+  const mergedState = {
+    ...localState,
+    ...remoteState,
+    attState: mergedAttState,
+    assessScores: mergedAssessScores,
+    workflows: mergedWorkflows,
+    syncMeta: {
+      attState: {},
+      assessScores: {},
+      workflows: {}
+    }
+  };
+
+  mergedState.syncMeta = buildSyncMeta(mergedState);
+  return mergedState;
 };
 
 
@@ -137,11 +251,14 @@ export const getSyncBlob = async () => {
     throw new Error('PIN/passphrase is required to derive the sync encryption key');
   }
 
-  return encryptSyncBlob(JSON.stringify({
+  const syncState = {
     attState: state.attState,
     assessScores: state.assessScores,
-    workflows: state.workflows
-  }), passphrase, state.teacherId);
+    workflows: state.workflows,
+    syncMeta: buildSyncMeta(state)
+  };
+
+  return encryptSyncBlob(JSON.stringify(syncState), passphrase, state.teacherId);
 };
 
 export const applySyncBlob = async (blobStr, newSyncId) => {
@@ -158,9 +275,17 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
 
     const decrypted = await decryptSyncBlob(blobStr, passphrase, state.teacherId);
     const remoteData = JSON.parse(decrypted);
-    state.attState = { ...state.attState, ...remoteData.attState };
-    state.assessScores = { ...state.assessScores, ...remoteData.assessScores };
-    state.workflows = remoteData.workflows || state.workflows;
+    const mergedState = mergeSyncState(state, {
+      attState: remoteData.attState || {},
+      assessScores: remoteData.assessScores || {},
+      workflows: remoteData.workflows || [],
+      syncMeta: remoteData.syncMeta || buildSyncMeta(remoteData)
+    });
+
+    state.attState = mergedState.attState;
+    state.assessScores = mergedState.assessScores;
+    state.workflows = mergedState.workflows;
+    state.syncMeta = mergedState.syncMeta;
     state.lastSyncId = newSyncId;
     saveStore(state);
     return true;
