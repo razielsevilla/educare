@@ -46,10 +46,10 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** `backend/educare.db` tracked and modified across commits (e.g. `946e057 chore(db): update local sqlite database state`, `aa72989 chore: add sqlite database file`)
 **Problem:** A binary database file is checked into version control and routinely updated as a "chore" commit. This bakes local/dev data permanently into history, produces unreviewable binary diffs, and will conflict destructively the moment two people touch the repo at once.
 **Acceptance Criteria:**
-- [ ] `backend/educare.db` is removed from git tracking and added to `.gitignore` (repo history rewrite is out of scope unless explicitly requested — just stop future commits).
-- [ ] A documented bootstrap step (e.g. `npm run db:init` or the existing `CREATE TABLE IF NOT EXISTS` logic running on first `npm start`) recreates an empty schema for any fresh clone.
-- [ ] README/CLAUDE.md is updated to state the DB file is local-only and git-ignored.
-- [ ] If seed/demo data is still needed for development, it's provided as a checked-in SQL/JS seed script, not a binary snapshot.
+- [x] `backend/educare.db` is removed from git tracking and added to `.gitignore` (repo history rewrite is out of scope unless explicitly requested — just stop future commits).
+- [x] A documented bootstrap step (e.g. `npm run db:init` or the existing `CREATE TABLE IF NOT EXISTS` logic running on first `npm start`) recreates an empty schema for any fresh clone.
+- [x] README/CLAUDE.md is updated to state the DB file is local-only and git-ignored.
+- [x] If seed/demo data is still needed for development, it's provided as a checked-in SQL/JS seed script, not a binary snapshot.
 
 ### BE-5 — Add request validation on all endpoints
 **Priority:** P1

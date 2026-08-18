@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# SQLite database files (local dev only; schema is auto-created)
+backend/educare.db
+backend/educare.test.db
+backend/*.db
+
+# OS / IDE
+.DS_Store
+.vscode/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
+.dist/
+
+# Environment
+.env
+.env.local
+
+# Misc
+*.log

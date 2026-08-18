@@ -47,7 +47,7 @@ npx cap sync android
 ```
 
 ### Tests
-No test suite exists in any subproject. `backend/package.json`'s `test` script is an unimplemented placeholder (`exit 1`); frontend and landing have no test tooling configured at all.
+The backend includes automated tests: run `npm test` from `backend/` to execute the test suite (auth, encryption, rate limiting). Frontend and landing have no test tooling configured yet.
 
 ## Architecture
 
@@ -64,13 +64,18 @@ Almost all of the real UI and screen logic lives as a large inline `<script>` bl
 
 Similarly, the detailed student profile and care-workflow screens (triage summary, insight cards, check-in prompts) are driven by a hardcoded `personaData` object inside index.html's inline script, with entries for exactly three named students ("Maria Santos", "Dante Pascual", "Carla Garcia"); any other student falls back to Maria Santos's persona. This is presentation-layer mock content and is independent of the real `computeRisk` tiering shown in the roster/discovery lists.
 
-### Sync is not actually zero-knowledge yet
-[backend/database.js](backend/database.js) documents `sync_blobs` as an encrypted-blob store for a "zero-knowledge architecture," but [frontend/src/sync.js](frontend/src/sync.js) currently pushes/pulls plain `JSON.stringify`'d data (`attState`, `assessScores`, `workflows`) with no client-side encryption. Sync is teacher-scoped (`teacherId`, generated via `POST /api/teacher/register`), and conflict handling is last-write-wins: `pullSync()` just applies the newest blob in full, and `applySyncBlob()` shallow-merges `attState`/`assessScores` and overwrites `workflows`. Background sync polls `pullSync()` every 10s (`startBackgroundSync` in sync.js).
+### Sync (Encrypted Zero-Knowledge Architecture)
 
-`sync.js` also hardcodes a LAN IP (`PC_IP`) used as the API host when the app is opened via `localhost`/`127.0.0.1` — update this constant to match the dev machine's current LAN IP when testing on a physical device/emulator against a local backend.
+[frontend/src/sync.js](frontend/src/sync.js) implements teacher-scoped sync with encrypted payloads. The backend accepts only encrypted blobs (format: `enc:v1:...`) and stores them opaquely in `sync_blobs.blobData` — the server has no key material to decrypt them. Client-side crypto lives in [frontend/src/crypto.js](frontend/src/crypto.js), using AES-GCM+PBKDF2 with a key derived from the teacher's password.
+
+Conflict handling is last-write-wins for now: `pullSync()` applies the newest blob in full, and `applySyncBlob()` shallow-merges `attState`/`assessScores` and overwrites `workflows`. See **BE-7** in [improvement.md](improvement.md) for planned versioning/merge improvements.
+
+`sync.js` hardcodes a LAN IP (`PC_IP`) used as the API host when the app is opened via `localhost`/`127.0.0.1` — update this constant to match the dev machine's current LAN IP when testing on a physical device/emulator against a local backend. (See **FE-11** for making this configurable.)
 
 ### Backend
-[backend/server.js](backend/server.js) is a single-file Express app with three routes: `GET /health`, `POST /api/sync/push`, `GET /api/sync/pull`, `POST /api/teacher/register`. No auth beyond passing a `teacherId`. [backend/database.js](backend/database.js) opens `backend/educare.db` (SQLite, checked into git) and creates `teachers`/`sync_blobs` tables on startup if missing; there are no migrations, just idempotent `CREATE TABLE IF NOT EXISTS`.
+[backend/server.js](backend/server.js) is a single-file Express app implementing JWT-authenticated sync endpoints with encrypted blob storage, rate limiting, and CORS controls. [backend/database.js](backend/database.js) opens a local SQLite database (`backend/educare.db`, **not checked into git**) and creates `teachers`/`sync_blobs` tables on first run using idempotent `CREATE TABLE IF NOT EXISTS` statements.
+
+**Database bootstrap:** The database file is auto-created on first `npm start`. Fresh clones and new developer machines will automatically initialize an empty schema. The `.db` files are git-ignored (`backend/educare.db`, `backend/*.db`) so no developer's local state leaks into version control. For testing, the test suite uses in-memory SQLite (`EDUCARE_DB_PATH=':memory:'`).
 
 ### Offline/PWA
 [frontend/public/sw.js](frontend/public/sw.js) is a service worker registered from `app.js`: cache-first for the app shell/fonts/icons, and for any request whose port is `3000` (the backend API) it goes network-first and silently returns a stub `{status:'offline'}` response on failure so the UI can keep relying on localStorage. Capacitor handles native offline behavior separately when packaged as an Android app, so the service worker mainly matters for the installable web/PWA path.
