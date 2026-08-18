@@ -79,10 +79,14 @@ const defaultState = {
   submissions: {},
   assessScores: {},
   workflows: [],
+  behaviorLogs: [],
+  careInteractions: [],
   syncMeta: {
     attState: {},
     assessScores: {},
-    workflows: {}
+    workflows: {},
+    behaviorLogs: {},
+    careInteractions: {}
   }
 };
 
@@ -120,11 +124,27 @@ const buildSyncMeta = (state = {}) => {
     workflowsMeta[workflowId] = { updatedAt };
   });
 
+  const behaviorLogsMeta = {};
+  (state.behaviorLogs || []).forEach((log) => {
+    const logId = log.id || `${log.student || 'unknown'}:${log.tag || 'tag'}:${normalizeTimestamp(log.timestamp, Date.now())}`;
+    const updatedAt = normalizeTimestamp(log.timestamp, Date.now());
+    behaviorLogsMeta[logId] = { updatedAt };
+  });
+
+  const careInteractionsMeta = {};
+  (state.careInteractions || []).forEach((interaction) => {
+    const interactionId = interaction.id || `${interaction.student || 'unknown'}:${normalizeTimestamp(interaction.timestamp, Date.now())}`;
+    const updatedAt = normalizeTimestamp(interaction.timestamp, Date.now());
+    careInteractionsMeta[interactionId] = { updatedAt };
+  });
+
   return {
     attState: attStateMeta,
     attendanceLog: attendanceLogMeta,
     assessScores: assessScoresMeta,
-    workflows: workflowsMeta
+    workflows: workflowsMeta,
+    behaviorLogs: behaviorLogsMeta,
+    careInteractions: careInteractionsMeta
   };
 };
 
@@ -204,6 +224,44 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
   });
 
   const mergedWorkflows = [...workflowMap.values()].sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+  const behaviorLogMap = new Map();
+  [...(localState.behaviorLogs || []), ...(remoteState.behaviorLogs || [])].forEach((log) => {
+    if (!log) return;
+
+    const logId = log.id || `${log.student || 'unknown'}:${log.tag || 'tag'}:${normalizeTimestamp(log.timestamp, Date.now())}`;
+    const nextLog = {
+      ...log,
+      id: logId,
+      timestamp: normalizeTimestamp(log.timestamp, Date.now())
+    };
+
+    const existing = behaviorLogMap.get(logId);
+    if (!existing || nextLog.timestamp >= existing.timestamp) {
+      behaviorLogMap.set(logId, nextLog);
+    }
+  });
+
+  const mergedBehaviorLogs = [...behaviorLogMap.values()].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const careInteractionMap = new Map();
+  [...(localState.careInteractions || []), ...(remoteState.careInteractions || [])].forEach((interaction) => {
+    if (!interaction) return;
+
+    const interactionId = interaction.id || `${interaction.student || 'unknown'}:${normalizeTimestamp(interaction.timestamp, Date.now())}`;
+    const nextInteraction = {
+      ...interaction,
+      id: interactionId,
+      timestamp: normalizeTimestamp(interaction.timestamp, Date.now())
+    };
+
+    const existing = careInteractionMap.get(interactionId);
+    if (!existing || nextInteraction.timestamp >= existing.timestamp) {
+      careInteractionMap.set(interactionId, nextInteraction);
+    }
+  });
+
+  const mergedCareInteractions = [...careInteractionMap.values()].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
   const mergedState = {
     ...localState,
     ...remoteState,
@@ -211,11 +269,15 @@ export const mergeSyncState = (localState = {}, remoteState = {}) => {
     attState: mergedAttState,
     assessScores: mergedAssessScores,
     workflows: mergedWorkflows,
+    behaviorLogs: mergedBehaviorLogs,
+    careInteractions: mergedCareInteractions,
     syncMeta: {
       attState: {},
       attendanceLog: {},
       assessScores: {},
-      workflows: {}
+      workflows: {},
+      behaviorLogs: {},
+      careInteractions: {}
     }
   };
 
@@ -368,6 +430,8 @@ export const getSyncBlob = async () => {
     attendanceLog: state.attendanceLog,
     assessScores: state.assessScores,
     workflows: state.workflows,
+    behaviorLogs: state.behaviorLogs,
+    careInteractions: state.careInteractions,
     syncMeta: buildSyncMeta(state)
   };
 
@@ -393,6 +457,8 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
       attendanceLog: remoteData.attendanceLog || {},
       assessScores: remoteData.assessScores || {},
       workflows: remoteData.workflows || [],
+      behaviorLogs: remoteData.behaviorLogs || [],
+      careInteractions: remoteData.careInteractions || [],
       syncMeta: remoteData.syncMeta || buildSyncMeta(remoteData)
     });
 
@@ -400,6 +466,8 @@ export const applySyncBlob = async (blobStr, newSyncId) => {
     state.attState = mergedState.attState;
     state.assessScores = mergedState.assessScores;
     state.workflows = mergedState.workflows;
+    state.behaviorLogs = mergedState.behaviorLogs;
+    state.careInteractions = mergedState.careInteractions;
     state.syncMeta = mergedState.syncMeta;
     state.lastSyncId = newSyncId;
     saveStore(state);
@@ -425,6 +493,68 @@ export const moveToRecovery = (student) => {
 
 export const getWorkflows = () => {
   return getStore().workflows || [];
+};
+
+export const getBehaviorLogs = (student = null) => {
+  const logs = getStore().behaviorLogs || [];
+  return student ? logs.filter((log) => log.student === student) : logs;
+};
+
+export const addBehaviorLog = (student, tag, timestamp = Date.now()) => {
+  const state = getStore();
+  const safeTag = String(tag || '').trim();
+  if (!student || !safeTag) return null;
+
+  const newLog = {
+    id: `${student}:${safeTag}:${timestamp}`,
+    student,
+    tag: safeTag,
+    timestamp
+  };
+
+  state.behaviorLogs = [...(state.behaviorLogs || [])].filter((log) => {
+    return !(log.student === student && log.tag === safeTag && log.timestamp === timestamp);
+  });
+  state.behaviorLogs.push(newLog);
+  saveStore(state);
+  return newLog;
+};
+
+export const addCareInteraction = (student, actionTaken, outcomeSelected, notes = '', timestamp = Date.now()) => {
+  const state = getStore();
+  if (!student || !actionTaken || !outcomeSelected) return null;
+
+  const followUpDate = timestamp + (7 * 24 * 60 * 60 * 1000); // 7 days from interaction timestamp
+
+  const newInteraction = {
+    id: `${student}:care:${timestamp}`,
+    student,
+    actionTaken,
+    outcomeSelected,
+    notes: String(notes || '').trim(),
+    timestamp,
+    followUpDate
+  };
+
+  state.careInteractions = [...(state.careInteractions || [])];
+  state.careInteractions.push(newInteraction);
+  saveStore(state);
+  return newInteraction;
+};
+
+export const getCareInteractionsForStudent = (student) => {
+  const interactions = getStore().careInteractions || [];
+  return interactions
+    .filter((interaction) => interaction.student === student)
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+};
+
+export const getCareInteractionsDue = () => {
+  const now = Date.now();
+  const interactions = getStore().careInteractions || [];
+  return interactions
+    .filter((interaction) => interaction.followUpDate && interaction.followUpDate <= now)
+    .sort((a, b) => (a.followUpDate || 0) - (b.followUpDate || 0));
 };
 
 // Per-device credential used only to authenticate this device to the sync backend.

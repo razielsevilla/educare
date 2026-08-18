@@ -1,4 +1,4 @@
-import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getOrCreateAuthPassword } from './store.js';
+import { getStore, saveStore, addStudent, addClass, fillMockData, getStudents, getAssessments, getSubmissions, getAttState, getAttendanceWindow, moveToRecovery, getWorkflows, getBehaviorLogs, addBehaviorLog, addCareInteraction, getCareInteractionsForStudent, getCareInteractionsDue, getOrCreateAuthPassword } from './store.js';
 import { registerTeacher, loginTeacher, pullSync, pushSync, startBackgroundSync } from './sync.js';
 
 // Expose store globally so inline scripts in index.html still work without breaking
@@ -11,14 +11,34 @@ window.fillMockData = () => { fillMockData(); window.pushSync(); location.reload
 window.clearLocalState = () => { localStorage.clear(); location.reload(); };
 window.moveToRecovery = (name) => { moveToRecovery(name); window.pushSync(); };
 window.getWorkflows = getWorkflows;
+window.addBehaviorLog = (student, tag, timestamp) => {
+  const log = addBehaviorLog(student, tag, timestamp);
+  if (log) {
+    window.pushSync();
+  }
+  return log;
+};
+window.addCareInteraction = (student, actionTaken, outcomeSelected, notes, timestamp) => {
+  const interaction = addCareInteraction(student, actionTaken, outcomeSelected, notes, timestamp);
+  if (interaction) {
+    window.pushSync();
+  }
+  return interaction;
+};
+window.getCareInteractionsForStudent = getCareInteractionsForStudent;
+window.getCareInteractionsDue = getCareInteractionsDue;
 
 // Risk Computation Engine
 export const computeRisk = (student) => {
   const attState = getAttState();
   const assessments = getAssessments();
   const submissions = getSubmissions();
+  const behaviorLogs = getBehaviorLogs(student);
   const attendanceWindow = getAttendanceWindow(student, 14);
   const absencesInWindow = attendanceWindow.filter((entry) => entry.status === 'A');
+  const recentBehavior = behaviorLogs
+    .filter((log) => Date.now() - (Number(log.timestamp) || 0) <= 21 * 24 * 60 * 60 * 1000)
+    .sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
 
   const isClusteredAbsencePattern = (entries) => {
     if (entries.length < 3) return false;
@@ -98,6 +118,21 @@ export const computeRisk = (student) => {
     tier = tier === 'clear' ? 'monitoring' : tier;
   } else if (currentAtt === 'L') {
     reasons.push('Late today');
+  }
+
+  const incidentTags = ['Incident', 'Disruptive', 'Withdrawn', 'Sleeping', 'Unprepared'];
+  const passiveTags = ['Quiet', 'Needs Support', 'Check-in', 'Helped Peer', 'Highly Engaged'];
+  const flaggedBehavior = recentBehavior.filter((log) => incidentTags.includes(log.tag));
+  if (flaggedBehavior.length > 0) {
+    const latestIncident = flaggedBehavior[0];
+    reasons.push(`Behavior incident: ${latestIncident.tag} logged recently`);
+    tier = tier === 'clear' ? 'flagged' : tier;
+  }
+
+  const passiveBehavior = recentBehavior.filter((log) => passiveTags.includes(log.tag));
+  if (passiveBehavior.length > 0 && tier === 'clear') {
+    reasons.push(`Participation note: ${passiveBehavior[0].tag}`);
+    tier = 'monitoring';
   }
 
   if (avgScore < 75) {
@@ -535,6 +570,10 @@ window.syncLocalStateToBackend = function(key, val) {
     state.submissions = val;
   } else if (key === 'workflows') {
     state.workflows = val;
+  } else if (key === 'behaviorLogs') {
+    state.behaviorLogs = val;
+  } else if (key === 'careInteractions') {
+    state.careInteractions = val;
   }
   saveStore(state);
   pushSync();

@@ -2881,7 +2881,7 @@
             </div>
 
             <label class="form-label">Optional note</label>
-            <textarea class="form-input" rows="3" placeholder="Add any observations or context..."
+            <textarea id="care-notes-input" class="form-input" rows="3" placeholder="Add any observations or context..."
               style="resize:none;margin-bottom:12px;"></textarea>
 
             <label class="form-label">Situation after check-in</label>
@@ -2905,7 +2905,7 @@
             </div>
 
             <label class="form-label">Schedule follow-up</label>
-            <input class="form-input" type="date" value="2026-06-23" style="margin-bottom:16px;">
+            <input id="care-followup-date" class="form-input" type="date" value="2026-06-23" style="margin-bottom:16px;">
 
             <button class="btn-primary" onclick="completeCarework()"><i class="ti ti-check"></i> Save & close
               workflow</button>
@@ -4169,11 +4169,40 @@
     }
 
     function completeCarework() {
-      const studentName = document.querySelector('#screen-care .top-bar-sub').textContent;
+      const studentName = document.querySelector('#screen-care .top-bar-sub')?.textContent || '';
+      if (!studentName) {
+        showToast('Student name not found');
+        return;
+      }
+
+      // Map action card ID to action name
+      const actionMap = {
+        ac1: 'check-in',
+        ac2: 'parent-contact',
+        ac3: 'counselor-referral',
+        ac4: 'admin-escalation'
+      };
+      const actionTaken = actionMap[selectedAction] || 'check-in';
+      const outcome = outcomeSelected || 'improving';
+      const notesEl = document.getElementById('care-notes-input');
+      const notes = notesEl?.value || '';
+
+      // Add the care interaction to the store
+      if (window.addCareInteraction) {
+        const interaction = window.addCareInteraction(studentName, actionTaken, outcome, notes);
+        if (interaction && window.syncLocalStateToBackend) {
+          window.syncLocalStateToBackend('careInteractions', window.getStore().careInteractions || []);
+        }
+      }
+
+      // Move student to recovery workflow
       if (window.moveToRecovery) {
         window.moveToRecovery(studentName);
       }
-      showToast('Care workflow saved · Follow-up set for Jun 23');
+
+      const followUpDate = new Date(interaction?.followUpDate || Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const followUpStr = followUpDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      showToast(`Care workflow saved · Follow-up scheduled for ${followUpStr}`);
       setTimeout(() => {
         careStep(1);
         navTo('screen-dashboard');
@@ -4230,7 +4259,17 @@
     }
 
     function logBehavior(tag) {
-      showToast(`Logged '${tag}' for ${activeBehaviorStudent.split(' ')[0]}`);
+      const student = activeBehaviorStudent;
+      if (!student || !tag) {
+        closeBehaviorSheet();
+        return;
+      }
+
+      const log = window.addBehaviorLog ? window.addBehaviorLog(student, tag) : null;
+      if (log && window.syncLocalStateToBackend) {
+        window.syncLocalStateToBackend('behaviorLogs', window.getStore().behaviorLogs || []);
+      }
+      showToast(`Logged '${tag}' for ${student.split(' ')[0]}`);
       closeBehaviorSheet();
       setTimeout(() => navTo('screen-dashboard'), 600);
     }

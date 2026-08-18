@@ -121,21 +121,21 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [index.html:4232-4236](frontend/index.html#L4232) — `logBehavior(tag)` only shows a toast and navigates; nothing is written to the store.
 **Problem:** One-tap behavior tagging is listed as an MVP feature but the tag is discarded immediately after the toast disappears.
 **Acceptance Criteria:**
-- [ ] `logBehavior(tag)` writes `{ student, tag, timestamp }` into the store (new `behaviorLogs` collection) and calls `syncLocalStateToBackend`.
-- [ ] `computeRisk`/its successor reads recent behavior logs and factors incident/passive/withdrawn tags into tier and reasons (per `pillars/discovery.md`'s intent), with the specific rule documented.
-- [ ] The student profile screen displays actual logged behavior history for that student, not just the hardcoded persona content (see FE-6).
-- [ ] A unit test confirms a logged "Incident" tag changes a student's computed tier.
+- [x] `logBehavior(tag)` writes `{ student, tag, timestamp }` into the store (new `behaviorLogs` collection) and calls `syncLocalStateToBackend`.
+- [x] `computeRisk`/its successor reads recent behavior logs and factors incident/passive/withdrawn tags into tier and reasons (per `pillars/discovery.md`'s intent), with the specific rule documented.
+- [x] The student profile screen displays actual logged behavior history for that student, not just the hardcoded persona content (see FE-6).
+- [x] A unit test confirms a logged "Incident" tag changes a student's computed tier.
 
 ### FE-5 — Implement a real Care Interaction Log and follow-up scheduler
 **Priority:** P1
 **Found in:** [index.html:4171-4181](frontend/index.html#L4171) — `completeCarework()` shows the literal hardcoded string `"Follow-up set for Jun 23"` and never records the action taken, notes, or the `outcomeSelected` value.
 **Problem:** The core "close the loop" step of the Care Workflow — the thing that supposedly prevents students from falling through the cracks — records nothing.
 **Acceptance Criteria:**
-- [ ] Completing a care workflow persists a record containing: student, action taken, outcome selected (improving/unchanged/worsening), any notes entered, and a real computed timestamp.
-- [ ] The follow-up date is computed (e.g. "+7 days" or a configurable interval) using the actual current date, not a hardcoded string, and is stored on the workflow record.
-- [ ] On or after the follow-up date, the student is resurfaced to the teacher (e.g. in a "Follow-ups due" list) with the prior interaction's context visible.
-- [ ] The student's profile/history view shows a chronological log of past care interactions and outcomes, not just the current stage.
-- [ ] A unit test confirms a follow-up dated today-or-earlier appears in a "due" query and one dated in the future does not.
+- [x] Completing a care workflow persists a record containing: student, action taken, outcome selected (improving/unchanged/worsening), any notes entered, and a real computed timestamp.
+- [x] The follow-up date is computed (e.g. "+7 days" or a configurable interval) using the actual current date, not a hardcoded string, and is stored on the workflow record.
+- [x] On or after the follow-up date, the student is resurfaced to the teacher (e.g. in a "Follow-ups due" list) with the prior interaction's context visible.
+- [x] The student's profile/history view shows a chronological log of past care interactions and outcomes, not just the current stage.
+- [x] A unit test confirms a follow-up dated today-or-earlier appears in a "due" query and one dated in the future does not.
 
 ### FE-6 — Replace hardcoded 3-student `personaData` with data-driven profile content
 **Priority:** P1
