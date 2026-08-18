@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const { z } = require('zod');
 const db = require('./database');
 
 dotenv.config();
@@ -59,6 +60,61 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Zod schemas for request validation
+const uuidSchema = z.string().uuid('Invalid UUID format');
+
+const pushSyncSchema = z.object({
+  teacherId: uuidSchema,
+  blobData: z.string().min(1, 'blobData is required'),
+});
+
+const pullSyncSchema = z.object({
+  teacherId: uuidSchema,
+  since: z.coerce.number().int('since must be an integer').nonnegative('since must be non-negative').default(0),
+});
+
+const registerTeacherSchema = z.object({
+  name: z.string().trim().min(1, 'Teacher name is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+// Validation middleware factory
+const validateBody = (schema) => (req, res, next) => {
+  try {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      const errorMessages = result.error.flatten().fieldErrors;
+      const formattedErrors = Object.entries(errorMessages)
+        .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+        .join('; ');
+      return res.status(400).json({ error: `Validation error: ${formattedErrors}` });
+    }
+    req.validatedBody = result.data;
+    next();
+  } catch (err) {
+    console.error('Validation middleware error:', err);
+    res.status(500).json({ error: 'Validation error' });
+  }
+};
+
+const validateQuery = (schema) => (req, res, next) => {
+  try {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      const errorMessages = result.error.flatten().fieldErrors;
+      const formattedErrors = Object.entries(errorMessages)
+        .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+        .join('; ');
+      return res.status(400).json({ error: `Validation error: ${formattedErrors}` });
+    }
+    req.validatedQuery = result.data;
+    next();
+  } catch (err) {
+    console.error('Validation middleware error:', err);
+    res.status(500).json({ error: 'Validation error' });
+  }
+};
+
 const isValidTeacherId = (teacherId) => typeof teacherId === 'string' && UUID_PATTERN.test(teacherId);
 const isEncryptedBlob = (value) => {
   if (typeof value !== 'string' || !value.startsWith(ENCRYPTED_BLOB_PREFIX)) {
@@ -104,12 +160,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'EduCare Backend is running' });
 });
 
-app.post('/api/sync/push', syncLimiter, (req, res) => {
-  const { teacherId, blobData } = req.body;
-
-  if (!teacherId || !isValidTeacherId(teacherId)) {
-    return res.status(400).json({ error: 'A valid teacherId is required' });
-  }
+app.post('/api/sync/push', syncLimiter, validateBody(pushSyncSchema), (req, res) => {
+  const { teacherId, blobData } = req.validatedBody;
 
   if (!isEncryptedBlob(blobData)) {
     return res.status(400).json({ error: 'blobData must be an encrypted payload in the enc:v1 format' });
@@ -134,17 +186,8 @@ app.post('/api/sync/push', syncLimiter, (req, res) => {
   });
 });
 
-app.get('/api/sync/pull', syncLimiter, (req, res) => {
-  const teacherId = req.query.teacherId;
-  const since = Number(req.query.since ?? 0);
-
-  if (!teacherId || !isValidTeacherId(teacherId)) {
-    return res.status(400).json({ error: 'A valid teacherId is required' });
-  }
-
-  if (!Number.isFinite(since) || since < 0) {
-    return res.status(400).json({ error: 'since must be a non-negative number' });
-  }
+app.get('/api/sync/pull', syncLimiter, validateQuery(pullSyncSchema), (req, res) => {
+  const { teacherId, since } = req.validatedQuery;
 
   const auth = authenticateTeacher(req, teacherId);
   if (!auth.ok) {
@@ -165,22 +208,13 @@ app.get('/api/sync/pull', syncLimiter, (req, res) => {
   });
 });
 
-app.post('/api/teacher/register', registerLimiter, async (req, res) => {
-  const { name, password } = req.body;
-  const cleanName = typeof name === 'string' ? name.trim() : '';
-
-  if (!cleanName) {
-    return res.status(400).json({ error: 'Teacher name is required' });
-  }
-
-  if (typeof password !== 'string' || password.length < 8) {
-    return res.status(400).json({ error: 'A password of at least 8 characters is required' });
-  }
+app.post('/api/teacher/register', registerLimiter, validateBody(registerTeacherSchema), async (req, res) => {
+  const { name, password } = req.validatedBody;
 
   const teacherId = uuidv4();
   const passwordHash = await bcrypt.hash(password, 12);
 
-  db.run('INSERT INTO teachers (id, name, passwordHash) VALUES (?, ?, ?)', [teacherId, cleanName, passwordHash], (err) => {
+  db.run('INSERT INTO teachers (id, name, passwordHash) VALUES (?, ?, ?)', [teacherId, name, passwordHash], (err) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to register teacher' });
     }

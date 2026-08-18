@@ -56,9 +56,9 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [server.js:22-24](backend/server.js#L22), [server.js:39-41](backend/server.js#L39), [server.js:54-56](backend/server.js#L54) — validation is limited to a single falsy-check per field.
 **Problem:** There's no type/shape/length validation on request bodies or query params — e.g. `blobData` could be any type, `teacherId` isn't checked to be a UUID, `since` isn't checked to be numeric.
 **Acceptance Criteria:**
-- [ ] A schema validation library (e.g. `zod`) defines the expected shape for every route's input.
-- [ ] Malformed input (wrong type, missing required field, invalid UUID format, non-numeric `since`) returns `400` with a descriptive error before any DB call.
-- [ ] Existing valid requests continue to succeed unchanged (regression-tested).
+- [x] A schema validation library (e.g. `zod`) defines the expected shape for every route's input.
+- [x] Malformed input (wrong type, missing required field, invalid UUID format, non-numeric `since`) returns `400` with a descriptive error before any DB call.
+- [x] Existing valid requests continue to succeed unchanged (regression-tested).
 
 ### BE-6 — Add an automated backend test suite
 **Priority:** P2
