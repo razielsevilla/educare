@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Reality = () => {
     return (
         <section id="problem" className="section-padding">

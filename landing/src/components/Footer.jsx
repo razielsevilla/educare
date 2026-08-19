@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Footer = () => {
     return (
         <>
@@ -9,7 +7,7 @@ const Footer = () => {
                         <h2>Protecting the Human Element</h2>
                         <p>EduCare does not attempt to replace teacher judgment or deep student relationships. It creates the
                             structural layer that gives teachers room to breathe and lets them provide care.</p>
-                        <a href="#" className="btn">Join Early Access</a>
+                        <span className="btn btn-disabled" aria-disabled="true">Early Access — Coming Soon</span>
                     </div>
                 </div>
             </section>
@@ -17,8 +15,7 @@ const Footer = () => {
                 <div className="container">
                     <div>&copy; 2026 EduCare System. Relationship Infrastructure for Classrooms.</div>
                     <div className="footer-links">
-                        <a href="#">Technical Specifications</a>
-                        <a href="#">Privacy Protocol</a>
+                        <a href="#technical">Technical Specifications</a>
                     </div>
                 </div>
             </footer>

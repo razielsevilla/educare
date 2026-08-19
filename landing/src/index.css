@@ -568,6 +568,50 @@ nav a.nav-link:hover {
     color: var(--soft-shadow);
 }
 
+/* --- PROTOTYPE MODAL --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(43, 45, 66, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+}
+
+.modal-box {
+    background-color: var(--white);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 24px 48px rgba(43, 45, 66, 0.2);
+}
+
+.modal-box h3 {
+    font-size: 20px;
+    margin-bottom: 16px;
+}
+
+.modal-box p {
+    font-size: 15px;
+    color: #4a4e69;
+    margin-bottom: 24px;
+}
+
+.btn-disabled {
+    display: inline-block;
+    background-color: transparent;
+    color: var(--soft-shadow);
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    border: 1px dashed var(--soft-shadow);
+    cursor: default;
+}
+
 /* --- FOOTER CTA --- */
 .cta-section {
     background: linear-gradient(180deg, var(--classroom-cream) 0%, var(--amber-glow) 100%);

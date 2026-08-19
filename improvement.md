@@ -225,42 +225,44 @@ Priority scale: **P0** (data/security integrity, blocks trustworthy use) · **P1
 **Found in:** [Header.jsx:16](landing/src/components/Header.jsx#L16) (`"Try the Prototype"` → `href="#"`), [Footer.jsx:12](landing/src/components/Footer.jsx#L12) (`"Join Early Access"` → `href="#"`)
 **Problem:** The two primary conversion actions on the entire marketing site go nowhere. A visitor motivated enough to click either button lands back on the same scroll position with no feedback.
 **Acceptance Criteria:**
-- [ ] "Try the Prototype" links to an actual reachable destination (hosted prototype build, app store listing, or a clearly-labeled "coming soon" state) — not `#`.
-- [ ] "Join Early Access" either links to a real signup mechanism (form, mailto, external waitlist tool) or is replaced with accurate copy if no signup flow exists yet.
-- [ ] No anchor tag on the page has a bare `href="#"` used as a placeholder for an unbuilt action (logo-to-top is fine; a fake CTA is not).
-- [ ] Clicking either button produces a visible outcome (navigation, modal, or confirmation), verified manually in a browser.
+- [x] "Try the Prototype" links to an actual reachable destination (hosted prototype build, app store listing, or a clearly-labeled "coming soon" state) — not `#`. *(Now opens a "coming soon" modal instead of a dead `#` anchor.)*
+- [x] "Join Early Access" either links to a real signup mechanism (form, mailto, external waitlist tool) or is replaced with accurate copy if no signup flow exists yet. *(No signup mechanism exists yet — replaced with a static "Early Access — Coming Soon" label, no longer a link.)*
+- [x] No anchor tag on the page has a bare `href="#"` used as a placeholder for an unbuilt action (logo-to-top is fine; a fake CTA is not).
+- [ ] Clicking either button produces a visible outcome (navigation, modal, or confirmation), verified manually in a browser. *(Verified via build + code review only — no browser automation tool was available in this session to click-test in an actual rendered browser.)*
 
 ### LP-2 — Fix or remove dead footer links
 **Priority:** P2
 **Found in:** [Footer.jsx:20-21](landing/src/components/Footer.jsx#L20) — `"Technical Specifications"` and `"Privacy Protocol"` both point to `href="#"`.
 **Problem:** These read as real, clickable legal/technical documents but lead nowhere — particularly bad for "Privacy Protocol" on a site collecting interest from teachers about handling student data.
 **Acceptance Criteria:**
-- [ ] Either real pages/documents exist at these links (a technical spec page, an actual privacy policy), or the links are removed from the footer until that content exists.
-- [ ] If a privacy policy is published, its claims are cross-checked against FE-8/BE-2's actual implementation status rather than describing aspirational encryption.
+- [x] Either real pages/documents exist at these links (a technical spec page, an actual privacy policy), or the links are removed from the footer until that content exists. *("Technical Specifications" now links to the real on-page `#technical` section; "Privacy Protocol" was removed since no policy exists and no data-collection mechanism is currently live on the site.)*
+- [x] If a privacy policy is published, its claims are cross-checked against FE-8/BE-2's actual implementation status rather than describing aspirational encryption. *(N/A — no privacy policy was published.)*
 
 ### LP-3 — Correct false security/capability claims in the Technical section
 **Priority:** P0
 **Found in:** [Technical.jsx:18-19](landing/src/components/Technical.jsx#L18) ("Student records stay securely encrypted on your device"), [Technical.jsx:30-31](landing/src/components/Technical.jsx#L30) ("Built-in biometric locks"), [Technical.jsx:60-64](landing/src/components/Technical.jsx#L60) (sample code implying rolling-window absence detection already runs).
 **Problem:** This is public-facing marketing copy soliciting "Early Access" interest from real teachers, asserting on-device encryption, biometric locks, and working rolling-window detection — none of which exist in the current codebase (see FE-2, FE-7, FE-8). This is the most externally visible instance of the vision/reality gap found in the full assessment.
+
+**Update:** re-verified against current code — FE-2/FE-3/FE-7/FE-8/BE-2 are now actually implemented (rolling 14-day window + personal-baseline detection in `app.js`, PIN-derived AES encryption at rest in `store.js`, Android biometric unlock via Capacitor in `app.js`), so the encryption and biometric claims are accurate today. What was still false: "Smart Term Awareness" (no quarter/grading-period logic exists anywhere) and, in `CareLoop.jsx`, "generative, context-aware check-in scripts", "historical success rate" matching, and automatic "shadow monitoring"/relapse-detection — all unimplemented aspirational claims from the pillars vision.
 **Acceptance Criteria:**
-- [ ] Every capability claim on the landing page is verified against actual shipped code before publishing, and copy is updated to describe current state accurately (e.g. "designed to" / "roadmap" framing for unbuilt features, present tense only for what's real).
-- [ ] The code-sample block either reflects logic that actually exists in the codebase or is explicitly labeled as an illustrative/conceptual example, not presented as running production logic.
-- [ ] A lightweight process is documented (e.g. a checklist in `CLAUDE.md` or a PR template item) requiring marketing copy changes to be checked against implementation status before merge, to prevent this drift recurring.
+- [x] Every capability claim on the landing page is verified against actual shipped code before publishing, and copy is updated to describe current state accurately (e.g. "designed to" / "roadmap" framing for unbuilt features, present tense only for what's real). *(Checked Technical.jsx and CareLoop.jsx claims against app.js/store.js; fixed "Smart Term Awareness" → "Personal Baseline Detection" and reframed CareLoop's Response/Recovery pillar copy with explicit "roadmap" framing for the generative/historical-matching/relapse-detection parts that don't exist.)*
+- [x] The code-sample block either reflects logic that actually exists in the codebase or is explicitly labeled as an illustrative/conceptual example, not presented as running production logic. *(Labeled "Illustrative — simplified from the real risk engine"; tier corrected from `MONITORING` to `CRITICAL` to match the actual `computeRisk` output.)*
+- [x] A lightweight process is documented (e.g. a checklist in `CLAUDE.md` or a PR template item) requiring marketing copy changes to be checked against implementation status before merge, to prevent this drift recurring. *(Added a "Marketing copy must match shipped code" note to CLAUDE.md's `landing/` section.)*
 
 ### LP-4 — Fix page metadata (title, description, social preview)
 **Priority:** P3
 **Found in:** [index.html:7](landing/index.html#L7) — `<title>landing</title>`, no meta description, no Open Graph/Twitter card tags.
 **Problem:** The browser tab, search results, and any shared link preview all show the generic Vite scaffold title instead of branding, and there's no description for SEO or social sharing.
 **Acceptance Criteria:**
-- [ ] `<title>` reflects the actual product name (e.g. "EduCare — Early Warning System for Student-Centered Care").
-- [ ] A `<meta name="description">` summarizing the product is present.
-- [ ] Open Graph (`og:title`, `og:description`, `og:image`) and equivalent Twitter card tags are added for link-preview rendering.
-- [ ] The favicon reference (`/favicon.svg`) is confirmed to resolve to a real, on-brand icon (not the default Vite/React icon).
+- [x] `<title>` reflects the actual product name (e.g. "EduCare — Early Warning System for Student-Centered Care").
+- [x] A `<meta name="description">` summarizing the product is present.
+- [x] Open Graph (`og:title`, `og:description`, `og:image`) and equivalent Twitter card tags are added for link-preview rendering. *(`og:image`/`twitter:image` point at the existing `/favicon.svg` — no dedicated social-preview image exists yet; worth a follow-up if a proper PNG preview image is wanted.)*
+- [x] The favicon reference (`/favicon.svg`) is confirmed to resolve to a real, on-brand icon (not the default Vite/React icon). *(Confirmed — it's the real EduCare "E" mark, not Vite scaffold.)*
 
 ### LP-5 — Enforce linting in CI/pre-commit
 **Priority:** P3
 **Found in:** `landing/eslint.config.js` exists and `npm run lint` is defined, but nothing in the repo runs it automatically.
 **Problem:** A lint config with no enforcement mechanism will silently rot as violations accumulate.
 **Acceptance Criteria:**
-- [ ] `npm run lint` runs clean on the current codebase (fix or justify any existing violations).
-- [ ] Linting is wired into CI (or, absent CI in this repo, documented as a required pre-commit/pre-push step) so future changes are checked automatically.
+- [x] `npm run lint` runs clean on the current codebase (fix or justify any existing violations). *(All 9 violations were the same unused `import React from 'react'` — dead now that the app uses the automatic JSX runtime; removed from all 9 files.)*
+- [x] Linting is wired into CI (or, absent CI in this repo, documented as a required pre-commit/pre-push step) so future changes are checked automatically. *(Split `.github/workflows/ci.yml` into a `frontend` job and a new `landing` job that runs `npm run lint` + `npm run build` on every push/PR to `main`.)*

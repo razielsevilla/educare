@@ -1,5 +1,3 @@
-import React from 'react';
-
 const UIPreview = () => {
     return (
         <div className="ui-preview">

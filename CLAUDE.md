@@ -86,3 +86,5 @@ Conflict handling merges concurrent edits per-field: `applySyncBlob()`/`mergeSyn
 
 ### `landing/`
 Independent React 19 + Vite app, ESLint-configured, deployed via `gh-pages` to `razielsevilla.github.io/educare`. It does not share code, state, or build tooling with `frontend/` — treat it as a separate project that happens to live in this repo.
+
+**Marketing copy must match shipped code, not the pillars vision.** Before merging any change to `landing/` copy that claims a capability (encryption, biometrics, detection logic, sync behavior, etc.), verify the claim against the actual `frontend`/`backend` implementation, not against README.md/pillars docs — those describe the target vision, which is often ahead of (or, after implementation catches up, behind) what this file says. Use present tense only for what's real today; use "designed to"/"roadmap" framing for anything not yet built. This file's own "gap" notes above can also drift out of date as features ship — treat them as a starting hint to verify, not a source of truth.

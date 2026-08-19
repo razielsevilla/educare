@@ -1,4 +1,3 @@
-import React from 'react';
 import UIPreview from './UIPreview';
 
 const Hero = () => {

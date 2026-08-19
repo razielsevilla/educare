@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CoreShift = () => {
     return (
         <section id="solution" className="section-padding shift-section">

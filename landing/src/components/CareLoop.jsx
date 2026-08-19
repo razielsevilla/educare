@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CareLoop = () => {
     return (
         <section id="loop" className="section-padding">
@@ -18,12 +16,12 @@ const CareLoop = () => {
                     <div className="loop-card">
                         <div className="loop-number">02</div>
                         <h4>Pillar 2: Response</h4>
-                        <p>EduCare supplies <strong>generative, context-aware check-in scripts</strong> and matches interventions based on the student's historical success rate, perfectly tailoring the response.</p>
+                        <p>EduCare suggests <strong>data-driven check-in prompts</strong> matched to whichever signal triggered the flag, so the teacher walks in with a starting point instead of a blank page. Fully personalized, historically-matched scripts are on our roadmap.</p>
                     </div>
                     <div className="loop-card">
                         <div className="loop-number">03</div>
                         <h4>Pillar 3: Recovery</h4>
-                        <p>Care doesn't end abruptly. The system employs <strong>shadow monitoring</strong> to detect early relapses, and automatically prompts <strong>positive reinforcement</strong> when a student stabilizes.</p>
+                        <p>Care doesn't end abruptly. Students move into a <strong>Shadow Monitoring</strong> list so they stay visible after a flag is resolved. Automatic relapse detection and reinforcement prompts are on our roadmap.</p>
                     </div>
                 </div>
             </div>
