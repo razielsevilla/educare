@@ -1,26 +1,16 @@
-const Footer = () => {
-    return (
-        <>
-            <section className="cta-section">
-                <div className="container">
-                    <div className="cta-content">
-                        <h2>Protecting the Human Element</h2>
-                        <p>EduCare does not attempt to replace teacher judgment or deep student relationships. It creates the
-                            structural layer that gives teachers room to breathe and lets them provide care.</p>
-                        <span className="btn btn-disabled" aria-disabled="true">Early Access — Coming Soon</span>
-                    </div>
-                </div>
-            </section>
-            <footer>
-                <div className="container">
-                    <div>&copy; 2026 EduCare System. Relationship Infrastructure for Classrooms.</div>
-                    <div className="footer-links">
-                        <a href="#technical">Technical Specifications</a>
-                    </div>
-                </div>
-            </footer>
-        </>
-    );
-};
+import mark from '../assets/educare-mark.png';
+
+const Footer = () => (
+    <footer>
+        <div className="container footer-inner">
+            <div className="footer-brand">
+                <img src={mark} alt="" />
+                <span>EduCare</span>
+            </div>
+            <span>Designed for the people who make learning feel possible.</span>
+            <span>© 2026 EduCare</span>
+        </div>
+    </footer>
+);
 
 export default Footer;

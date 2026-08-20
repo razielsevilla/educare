@@ -485,12 +485,23 @@ export const escapeHtml = (unsafe) => {
       pinVal += d;
       updatePinDots();
       if (pinVal.length === 4) {
+        const pinStatus = document.getElementById('pin-status-msg');
+        if (pinStatus) pinStatus.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="animation: ui-spin 1s linear infinite; vertical-align: middle; margin-right: 4px;"><style>@keyframes ui-spin { 100% { transform: rotate(360deg); } }</style><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg> Verifying...';
+        
+        const pinBtns = document.querySelectorAll('.pin-pad button');
+        pinBtns.forEach(btn => btn.disabled = true);
+
+        
         setTimeout(() => {
           const attemptedPin = pinVal;
           const result = window.verifySecurityPin ? window.verifySecurityPin(attemptedPin) : { ok: false, reason: 'invalid' };
+          
+          pinBtns.forEach(btn => btn.disabled = false);
+
           if (result.ok) {
             pinVal = '';
             updatePinDots();
+            if (pinStatus) pinStatus.textContent = 'Enter your PIN';
             if (window.syncAfterUnlock) {
               window.syncAfterUnlock();
             }
@@ -603,6 +614,25 @@ export const escapeHtml = (unsafe) => {
         return;
       }
 
+      const inputsToDisable = [
+        document.getElementById('setup-teacher-name'),
+        document.getElementById('setup-teacher-pin'),
+        document.getElementById('setup-class-name'),
+        document.getElementById('setup-students')
+      ];
+      inputsToDisable.forEach(input => { if (input) input.disabled = true; });
+      const submitBtn = document.querySelector('button[onclick="handleCreateClass()"]');
+      let originalBtnHtml = '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        originalBtnHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" style="animation: ui-spin 1s linear infinite; margin-right: 8px;"><style>@keyframes ui-spin { 100% { transform: rotate(360deg); } }</style><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg> Initializing...';
+      }
+
+      showToast('Initializing class, please wait...');
+      // Yield to allow UI to render the toast before synchronous PBKDF2 blocking
+      await new Promise(r => setTimeout(r, 50));
+
       // Save credentials & initialize class
       localStorage.setItem('educare_teacher_name', teacherName);
       localStorage.setItem('educare_current_class', className);
@@ -613,6 +643,11 @@ export const escapeHtml = (unsafe) => {
           window.setupSecurityPin(pin);
         } catch (_err) {
           showToast('Failed to set PIN. Please try again.');
+          inputsToDisable.forEach(input => { if (input) input.disabled = false; });
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+          }
           return;
         }
       }
@@ -670,7 +705,7 @@ export const escapeHtml = (unsafe) => {
 
       setTimeout(() => {
         navTo('screen-dashboard');
-      }, 1000);
+      }, 100);
     }
 
     // ── ATTENDANCE ──
